@@ -5,37 +5,80 @@ import (
 	"container/heap"
 	"fmt"
 	"io"
+	"log"
+	"sort"
 	"strings"
 )
 
 // Vocab is a mapping between token and token ID.
 type Vocab struct {
-	Token2Id map[string]int
-	Id2Token []string
+	Ids    map[string]int
+	Tokens []string
 }
 
 // VSharder is a mapping between token ID and multi-level of V-shards.
 type VSharder struct {
-	Breakpoints []int // breakpoints of the most detailed level.
-	NumShards   []int // number of V-shards at each level.
+	Breakpoints []int // Accumulative bucket sizes.
 }
 
-// func BuildVocabAndVSharder(tokenFreqList io.Reader, numVShards ...int) (*Vocab, *VSharder, error) {
-// 	tfl, e := loadTokenFreqList(tokenFreqList)
-// 	if e != nil {
-// 		return nil, nil, e
-// 	}
+// If Vocab contains token, returns its Id; otherwise returns -1.
+func (v *Vocab) Id(token string) int {
+	if id, ok := v.Ids[token]; ok {
+		return id
+	}
+	return -1
+}
 
-// 	return buildVocab(tfl), buildVShards(tfl, numVShards), e
-// }
+// If Vocab contains token, returns token; otherwise panics.
+func (v *Vocab) Token(id int) string {
+	if id < 0 || id >= len(v.Tokens) {
+		log.Panicf("Vocab.Token: id (%d) is out of range [%d, %d)", id, 0, len(v.Tokens))
+	}
+	return v.Tokens[id]
+}
 
-func buildBalancedVShards(r io.Reader, n int) ([]vshard, error) {
+// Use binary search to find locate shard of a token.
+func (v *VSharder) Shard(token int) int {
+	if token < 0 {
+		return -1
+	}
+	return sort.Search(len(v.Breakpoints), func(i int) bool { return v.Breakpoints[i] > token })
+}
+
+func BuildVocabAndVSharder(tokenFreqList io.Reader, numVShards int, delUnbalanced bool) (*Vocab, *VSharder, error) {
+	h, e := buildBalancedVShards(tokenFreqList, numVShards)
+	if e != nil {
+		return nil, nil, e
+	}
+
+	v := &Vocab{
+		Ids:    make(map[string]int),
+		Tokens: make([]string, 0)}
+	s := &VSharder{
+		Breakpoints: make([]int, 0, len(h))}
+
+	μ, _ := h.variance()
+	a := 0
+	for _, shard := range h {
+		if !delUnbalanced || len(shard.tokens) > 1 || shard.weight <= μ { // NOTE: ignore singular and unbalaned buckets.
+			for _, token := range shard.tokens {
+				v.Tokens = append(v.Tokens, token)
+				v.Ids[token] = len(v.Tokens) - 1
+			}
+			a += len(shard.tokens)
+			s.Breakpoints = append(s.Breakpoints, a)
+		}
+	}
+	return v, s, nil
+}
+
+func buildBalancedVShards(r io.Reader, n int) (vshardHeap, error) {
 	h := make(vshardHeap, n)
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		var freq float64
 		var token string
-		if _, e := fmt.Fscanf(strings.NewReader(scanner.Text()), "%f %v", &freq, &token); e != nil {
+		if _, e := fmt.Fscanf(strings.NewReader(scanner.Text()), "%f %s", &freq, &token); e != nil {
 			return nil, e
 		}
 		h[0].tokens = append(h[0].tokens, token)
@@ -68,12 +111,16 @@ func (h vshardHeap) Pop() interface{} {
 	panic("vshardHeap.Pop not implemented")
 }
 
-// TODO(y): Add vshardHeap.variance.
-
-func prod(s []int) int {
-	r := 1
-	for _, v := range s {
-		r *= v
+func (h vshardHeap) variance() (float64, float64) {
+	s := 0.0
+	for _, v := range h {
+		s += v.weight
 	}
-	return r
+	mean := s / float64(len(h))
+
+	s = 0.0
+	for _, v := range h {
+		s += (v.weight - mean) * (v.weight - mean)
+	}
+	return mean, s / float64(len(h))
 }
