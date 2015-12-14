@@ -1,3 +1,8 @@
+// Load token frequency list and generates Vocab and VSharder
+// file. Example usage:
+//
+//   $GOPATH/bin/vshard -tf='../testdata/internet-zh.num' -s 100 -vocab /tmp/v -vshdr /tmp/s
+//
 package main
 
 import (
