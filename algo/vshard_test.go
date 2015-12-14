@@ -33,6 +33,8 @@ func TestBuildVocabAndVSharder(t *testing.T) {
 	}
 
 	assert := assert.New(t)
+	assert.Equal(s.Num(), 2)
+
 	assert.Equal("我", v.Token(0))
 	assert.Equal("们", v.Token(1))
 	assert.Equal("，", v.Token(2))

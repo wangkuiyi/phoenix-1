@@ -45,6 +45,11 @@ func (v *VSharder) Shard(token int) int {
 	return sort.Search(len(v.Breakpoints), func(i int) bool { return v.Breakpoints[i] > token })
 }
 
+// Returns the real number of shards, after filtering out singular shards.
+func (v *VSharder) Num() int {
+	return len(v.Breakpoints)
+}
+
 func BuildVocabAndVSharder(tokenFreqList io.Reader, numVShards int, delUnbalanced bool) (*Vocab, *VSharder, error) {
 	h, e := buildBalancedVShards(tokenFreqList, numVShards)
 	if e != nil {
