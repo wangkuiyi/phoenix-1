@@ -1,15 +1,15 @@
 package algo
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/wangkuiyi/fs"
 )
 
 func BenchmarkBuildVocabAndVSharder(t *testing.B) {
-	f, e := os.Open("testdata/internet-zh.num")
+	f, e := fs.Open("testdata/internet-zh.num")
 	if e != nil {
 		t.Skip(e)
 	}

@@ -14,6 +14,7 @@ import (
 type Vocab struct {
 	Ids    map[string]int
 	Tokens []string
+	// TODO(y): Add Freq[]float64 so we can print shard freqs.
 }
 
 // VSharder is a mapping between token ID and multi-level of V-shards.
