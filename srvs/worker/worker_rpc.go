@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/gob"
+	"fmt"
 	"math/rand"
 
 	"github.com/huichen/sego"
@@ -12,7 +13,8 @@ import (
 )
 
 // Worker is the RPC service implementation.
-type Worker struct {
+type WorkerRPC struct {
+	addr  string // Worker address. Also worker ID.
 	sgmt  *sego.Segmenter
 	vocab *algo.Vocab
 	vshdr *algo.VSharder
@@ -20,16 +22,16 @@ type Worker struct {
 	cfg   *srvs.Config
 }
 
-func (w *Worker) Initialize(shard_filename string, _ *int) error {
+func (w *WorkerRPC) Initialize(shard_filename string, _ *int) error {
 	in, e := fs.Open(shard_filename)
 	if e != nil {
-		return e
+		return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
 	}
 	defer in.Close()
 
 	out, e := fs.Create(w.cfg.IterDir(0))
 	if e != nil {
-		return e
+		return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
 	}
 	defer out.Close()
 
@@ -38,8 +40,8 @@ func (w *Worker) Initialize(shard_filename string, _ *int) error {
 	for scanner.Scan() {
 		d := algo.NewDocument(scanner.Text(), w.sgmt, w.vocab, w.vshdr, w.rng, w.cfg.Topics)
 		if e := encoder.Encode(d); e != nil {
-			return e
+			return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
 		}
 	}
-	return scanner.Err()
+	return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, scanner.Err())
 }
