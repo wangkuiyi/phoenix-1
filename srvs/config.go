@@ -1,14 +1,31 @@
 package srvs
 
 import (
+	"flag"
 	"fmt"
 	"path"
 )
 
 type Config struct {
-	BaseDir   string // This also identifies a job.
-	Topics    int    // Number of topics we are learning.
-	CorpusDir string // Where corpus shards reside.
+	BaseDir   string
+	CorpusDir string
+	Vocab     string
+	Segmenter string
+
+	Topics    int
+	VShards   int
+	MinGroups int
+}
+
+func (cfg *Config) RegisterFlags() {
+	flag.StringVar(&cfg.BaseDir, "job", "", "The base directory of a job, as well as job id")
+	flag.StringVar(&cfg.CorpusDir, "corpus", "", "The directory in which each file is a training shard")
+	flag.StringVar(&cfg.Vocab, "vocab", "", "The token frequency file. Not listed tokens in corpus are ignored.")
+	flag.StringVar(&cfg.Segmenter, "segmenter", "", "The segmenter dictionary file.")
+
+	flag.IntVar(&cfg.Topics, "topics", 2, "The number of topics we are going to learn")
+	flag.IntVar(&cfg.VShards, "vshards", 2, "The number of topics we are going to learn")
+	flag.IntVar(&cfg.MinGroups, "minGroups", 1, "The minimum number of worker groups")
 }
 
 func (cfg *Config) IterDir(iter int) string {
