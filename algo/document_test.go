@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/huichen/sego"
 	"github.com/stretchr/testify/assert"
+	"github.com/wangkuiyi/sego"
 )
 
 var (
@@ -16,7 +16,7 @@ var (
 )
 
 func init() {
-	sgmt.LoadDictionary(path.Join(os.Getenv("GOPATH"), "src/github.com/huichen/sego/data/dictionary.txt"))
+	sgmt.LoadDictionary(path.Join(os.Getenv("GOPATH"), "src/github.com/wangkuiyi/sego/data/dictionary.txt"))
 }
 
 // This test shows that sego.Segmenter inserts space at where we

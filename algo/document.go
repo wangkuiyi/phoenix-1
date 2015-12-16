@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"unicode"
 
-	"github.com/huichen/sego"
+	"github.com/wangkuiyi/sego"
 )
 
 type Document struct {
