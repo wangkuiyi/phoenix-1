@@ -118,15 +118,13 @@ func (h vshardHeap) Pop() interface{} {
 }
 
 func (h vshardHeap) variance() (float64, float64) {
-	s := 0.0
+	sumSq := 0.0
+	sum := 0.0
 	for _, v := range h {
-		s += v.weight
+		sumSq += v.weight * v.weight
+		sum += v.weight
 	}
-	mean := s / float64(len(h))
-
-	s = 0.0
-	for _, v := range h {
-		s += (v.weight - mean) * (v.weight - mean)
-	}
-	return mean, s / float64(len(h))
+	μ := sum / float64(len(h))
+	σ := sumSq/float64(len(h)) - μ*μ
+	return μ, σ
 }
