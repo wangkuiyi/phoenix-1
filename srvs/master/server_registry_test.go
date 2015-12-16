@@ -9,10 +9,14 @@ import (
 	"time"
 
 	"github.com/wangkuiyi/parallel"
+	"github.com/wangkuiyi/phoenix/srvs"
 )
 
-func TestServerRegistry(t *testing.T) {
-	sr := NewServerRegistry(1 /*vshards*/, 2 /*minGroups*/)
+func TestRegistry(t *testing.T) {
+	cfg := &srvs.Config{
+		VShards:   1,
+		MinGroups: 2}
+	sr := NewRegistry(cfg)
 
 	rpc.Register(sr)
 	rpc.HandleHTTP()
@@ -45,13 +49,13 @@ func runClients(role string, workers int, master string, t *testing.T) {
 			if client, e := rpc.DialHTTP("tcp", master); e != nil {
 				t.Errorf("%v (%v) cannot dial master (%v): %v", role, l.Addr(), master, e)
 			} else {
-				connect := false
-				e = client.Call(fmt.Sprintf("ServerRegistry.Register%v", role), l.Addr().String(), &connect)
+				var cfg srvs.Config
+				e = client.Call(fmt.Sprintf("Registry.Add%v", role), l.Addr().String(), &cfg)
 				if e != nil {
 					t.Errorf("%v (%v) failed with RPC: %v", role, l.Addr(), e)
 				}
 
-				if !connect {
+				if cfg.VShards == 0 {
 					t.Errorf("Master cannot connect with %v (%v)", role, l.Addr())
 				}
 			}

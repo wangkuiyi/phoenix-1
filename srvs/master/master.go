@@ -17,7 +17,7 @@ func main() {
 	cfg.RegisterFlags()
 	flag.Parse()
 
-	sr := NewServerRegistry(cfg.VShards, cfg.MinGroups)
+	sr := NewRegistry(&cfg)
 
 	rpc.Register(sr)
 	rpc.HandleHTTP()
@@ -28,7 +28,7 @@ func main() {
 	}
 }
 
-func waitForServerRegistration(sr *ServerRegistry) {
+func waitForServerRegistration(sr *Registry) {
 	select {
 	case <-sr.completion:
 		fmt.Println("Start working ...")
