@@ -18,7 +18,7 @@ type Config struct {
 }
 
 func (cfg *Config) RegisterFlags() {
-	flag.StringVar(&cfg.BaseDir, "job", "", "The base directory of a job, as well as job id")
+	flag.StringVar(&cfg.BaseDir, "base", "", "The base directory of a job, as well as job id")
 	flag.StringVar(&cfg.CorpusDir, "corpus", "", "The directory in which each file is a training shard")
 	flag.StringVar(&cfg.Vocab, "vocab", "", "The token frequency file. Not listed tokens in corpus are ignored.")
 	flag.StringVar(&cfg.Segmenter, "segmenter", "", "The segmenter dictionary file.")
