@@ -9,6 +9,8 @@ import (
 	"github.com/wangkuiyi/phoenix/srvs"
 )
 
+// Registry is a RPC type.  It allows and expects vshards aggregators
+// and at least group*vshards workers to register themselves.
 type Registry struct {
 	vshards     int
 	minGroups   int
@@ -34,13 +36,12 @@ func (sr *Registry) completed() bool {
 	return len(sr.aggregators) == sr.vshards && len(sr.workers) >= sr.vshards*sr.minGroups
 }
 
+// NOTE: AddWorker doesn't put a cap on the number of workers. So
+// there might be workers register themselves after the workflow
+// starts.
 func (sr *Registry) AddWorker(addr string, cfg *srvs.Config) error {
 	sr.mutex.Lock()
 	defer sr.mutex.Unlock()
-
-	if len(sr.workers) >= sr.vshards*sr.minGroups {
-		return errors.New("No more workers required")
-	}
 
 	if c, e := srvs.Dial(addr); e == nil {
 		log.Printf("Established connection to registered worker %s.", addr)

@@ -14,6 +14,7 @@ import (
 
 func main() {
 	master := flag.String("master", "", "Master address")
+	timeout := flag.Int("registration", 5, "Registeration timeout in seconds")
 	flag.Parse()
 
 	l, e := net.Listen("tcp", ":0") // OS allocates a free port.
@@ -21,12 +22,13 @@ func main() {
 		log.Fatalf("Aggregator cannot listen on: %v", e)
 	}
 
-	w := &AggregatorRPC{}
+	w := &AggregatorRPC{addr: l.Addr().String()}
 	rpc.Register(w)
+	rpc.HandleHTTP()
 
 	go func() {
-		if e := healthz.OK(*master, 5*time.Second); e != nil {
-			log.Fatalf("Waiting for master timeed out: %v", e)
+		if e := healthz.OK(*master, time.Duration(*timeout)*time.Second); e != nil {
+			log.Fatalf("Waiting for master timed out: %v", e)
 		}
 		if e := srvs.Call(*master, "Registry.AddAggregator", w.addr, &w.cfg); e != nil {
 			log.Fatalf("Worker %v Cannot register to master: %v", w.addr, e)
