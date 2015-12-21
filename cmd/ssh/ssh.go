@@ -14,17 +14,17 @@ func main() {
 	var cfg srvs.Config
 	cfg.RegisterFlags()
 	role := flag.String("role", "", "Process role: master, aggregator or worker")
-	masterAddr := flag.String("master", "", "Local master address, must be in form :xxxx")
+	addr := flag.String("master", "", "Local master address, must be in form :xxxx")
 	timeout := flag.Int("registration", 5, "Registeration timeout in seconds")
 	flag.Parse()
 
 	switch *role {
 	case "master":
-		master.Run(*masterAddr, *timeout, &cfg)
+		master.Run(*addr, *timeout, &cfg)
 	case "aggregator":
-		aggregator.Run(*masterAddr, *timeout)
+		aggregator.Run(*addr, *timeout)
 	case "worker":
-		worker.Run(*masterAddr, *timeout)
+		worker.Run(*addr, *timeout)
 	default:
 		log.Fatal("Unknown role: ", *role)
 	}

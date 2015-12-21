@@ -15,17 +15,13 @@ import (
 )
 
 func init() {
-	buildServer("master")
-	buildServer("worker")
-	buildServer("aggregator")
+	buildBinary()
 }
 
-// server could be "master", "worker", or "aggregator".
-func buildServer(server string) {
-	p := path.Join("github.com/wangkuiyi/phoenix/srvs", server)
-	b, e := exec.Command("go", "install", p).CombinedOutput()
+func buildBinary() {
+	b, e := exec.Command("go", "install", "github.com/wangkuiyi/phoenix/cmd/ssh").CombinedOutput()
 	if e != nil {
-		log.Panicf("Failed building %s: %v: %s", server, e, b)
+		log.Panicf("Failed building: %v: %s", e, b)
 	}
 }
 
@@ -39,7 +35,7 @@ func TestRegistration(t *testing.T) {
 	time.Sleep(time.Second)
 	go runServer(t, "aggregator", "-master=:16060", "-registration=5")
 	time.Sleep(time.Second)
-	go runServer(t, "master", "-addr=:16060", "-base="+base, "-vshards=1", "-groups=2", "-registration=5")
+	go runServer(t, "master", "-master=:16060", "-base="+base, "-vshards=1", "-groups=2", "-registration=5")
 
 	// NOTE: Here we assume that the master will create the base
 	// dir once all required servers register themselves.
@@ -49,12 +45,14 @@ func TestRegistration(t *testing.T) {
 
 }
 
-func runServer(t *testing.T, server string, args ...string) {
-	p := path.Join(os.Getenv("GOPATH"), "bin", server)
+func runServer(t *testing.T, role string, args ...string) {
+	p := path.Join(os.Getenv("GOPATH"), "bin", "ssh")
+	args = append(args, "-role="+role)
 	fmt.Printf("Starting %v %v\n", p, strings.Join(args, " "))
-	// NOTE: the sub-process created by Cmd.CombinedOutput will be kill after this test process completes.
+	// NOTE: the sub-process created by Cmd.CombinedOutput will be
+	// killed after this test process completes.
 	b, e := exec.Command(p, args...).CombinedOutput()
 	if e != nil {
-		t.Skipf("Failed runing %s: %v: %s", server, e, b)
+		t.Skipf("Failed runing %s: %v: %s", role, e, b)
 	}
 }
