@@ -1,4 +1,4 @@
-package main
+package master
 
 import (
 	"fmt"
@@ -14,8 +14,8 @@ import (
 
 func TestRegistry(t *testing.T) {
 	cfg := &srvs.Config{
-		VShards:   1,
-		MinGroups: 2}
+		VShards: 1,
+		Groups:  2}
 	sr := NewRegistry(cfg)
 
 	rpc.Register(sr)

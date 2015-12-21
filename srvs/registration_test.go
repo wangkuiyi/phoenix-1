@@ -39,7 +39,7 @@ func TestRegistration(t *testing.T) {
 	time.Sleep(time.Second)
 	go runServer(t, "aggregator", "-master=:16060", "-registration=5")
 	time.Sleep(time.Second)
-	go runServer(t, "master", "-addr=:16060", "-base="+base, "-vshards=1", "-minGroups=2")
+	go runServer(t, "master", "-addr=:16060", "-base="+base, "-vshards=1", "-groups=2", "-registration=5")
 
 	// NOTE: Here we assume that the master will create the base
 	// dir once all required servers register themselves.

@@ -1,7 +1,6 @@
-package main
+package master
 
 import (
-	"flag"
 	"log"
 	"net/http"
 	"net/rpc"
@@ -11,16 +10,8 @@ import (
 	"github.com/wangkuiyi/phoenix/srvs"
 )
 
-func main() {
-	addr := flag.String("addr", "", "Master listening address")
-	timeout := flag.Int("registration", 5, "Registeration timeout in seconds")
-	var cfg srvs.Config
-	cfg.RegisterFlags()
-	flag.Parse()
-
-	sr := NewRegistry(&cfg)
-	wf := NewWorkflow(&cfg)
-
+func Run(addr string, timeout int, cfg *srvs.Config) {
+	sr := NewRegistry(cfg)
 	rpc.Register(sr)
 	rpc.HandleHTTP()
 
@@ -28,13 +19,13 @@ func main() {
 		select {
 		case <-sr.completion:
 			log.Println("Finished server registration. Starting workflow.")
-			wf.Start()
-		case <-time.After(time.Duration(*timeout) * time.Second): //TODO(y): make this a config flag
+			NewWorkflow(cfg).Start()
+		case <-time.After(time.Duration(timeout) * time.Second):
 			log.Fatal("Server registration timed out.")
 		}
 	}()
 
-	if e := http.ListenAndServe(*addr, nil); e != nil {
+	if e := http.ListenAndServe(addr, nil); e != nil {
 		log.Panic(e)
 	}
 }
