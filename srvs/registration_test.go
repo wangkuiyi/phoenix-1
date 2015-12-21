@@ -30,19 +30,20 @@ func buildServer(server string) {
 }
 
 func TestRegistration(t *testing.T) {
-	go runServer(t, "worker", "-master=:6060", "-registration=5")
-	time.Sleep(time.Second)
-	go runServer(t, "worker", "-master=:6060", "-registration=5")
-	time.Sleep(time.Second)
-	go runServer(t, "aggregator", "-master=:6060", "-registration=5")
-	time.Sleep(time.Second)
-
 	base := fmt.Sprintf("/tmp/%d-%d", os.Getpid(), time.Now().UnixNano())
-	go runServer(t, "master", "-addr=:6060", "-base="+base, "-vshards=1", "-minGroups=2")
+
+	// NOTE: Here we assuem that :16060 was not used by other programs.
+	go runServer(t, "worker", "-master=:16060", "-registration=5")
+	time.Sleep(time.Second)
+	go runServer(t, "worker", "-master=:16060", "-registration=5")
+	time.Sleep(time.Second)
+	go runServer(t, "aggregator", "-master=:16060", "-registration=5")
+	time.Sleep(time.Second)
+	go runServer(t, "master", "-addr=:16060", "-base="+base, "-vshards=1", "-minGroups=2")
 
 	// NOTE: Here we assume that the master will create the base
 	// dir once all required servers register themselves.
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 	_, e := fs.Stat(base)
 	assert.Nil(t, e)
 
@@ -51,6 +52,7 @@ func TestRegistration(t *testing.T) {
 func runServer(t *testing.T, server string, args ...string) {
 	p := path.Join(os.Getenv("GOPATH"), "bin", server)
 	fmt.Printf("Starting %v %v\n", p, strings.Join(args, " "))
+	// NOTE: the sub-process created by Cmd.CombinedOutput will be kill after this test process completes.
 	b, e := exec.Command(p, args...).CombinedOutput()
 	if e != nil {
 		t.Skipf("Failed runing %s: %v: %s", server, e, b)

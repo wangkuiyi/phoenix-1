@@ -32,7 +32,7 @@ func Call(addr, method string, args, reply interface{}) error {
 
 func Seed(text string) int64 {
 	hasher := md5.New()
-	hasher.Write([]byte("Hello"))
+	hasher.Write([]byte(text))
 	sum := hasher.Sum(nil)
 	return *(*int64)(unsafe.Pointer(&sum[0]))
 }

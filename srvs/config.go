@@ -24,7 +24,7 @@ func (cfg *Config) RegisterFlags() {
 	flag.StringVar(&cfg.Segmenter, "segmenter", "", "The segmenter dictionary file.")
 
 	flag.IntVar(&cfg.Topics, "topics", 2, "The number of topics we are going to learn")
-	flag.IntVar(&cfg.VShards, "vshards", 2, "The number of topics we are going to learn")
+	flag.IntVar(&cfg.VShards, "vshards", 2, "The number of VShards of the model")
 	flag.IntVar(&cfg.MinGroups, "minGroups", 1, "The minimum number of worker groups")
 }
 

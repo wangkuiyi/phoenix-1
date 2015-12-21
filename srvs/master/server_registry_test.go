@@ -42,7 +42,7 @@ func runClients(role string, workers int, master string, t *testing.T) {
 		go func() {
 			l, e := net.Listen("tcp", ":0") // OS allocates a free port.
 			if e != nil {
-				t.Skip("Mocking aggregator server cannot listen: ", e)
+				t.Skip("Mocking %s server cannot listen: ", role, e)
 			}
 			go http.Serve(l, nil)
 
@@ -53,10 +53,6 @@ func runClients(role string, workers int, master string, t *testing.T) {
 				e = client.Call(fmt.Sprintf("Registry.Add%v", role), l.Addr().String(), &cfg)
 				if e != nil {
 					t.Errorf("%v (%v) failed with RPC: %v", role, l.Addr(), e)
-				}
-
-				if cfg.VShards == 0 {
-					t.Errorf("Master cannot connect with %v (%v)", role, l.Addr())
 				}
 			}
 		}()

@@ -27,6 +27,7 @@ func main() {
 	go func() {
 		select {
 		case <-sr.completion:
+			log.Println("Finished server registration. Starting workflow.")
 			wf.Start()
 		case <-time.After(time.Duration(*timeout) * time.Second): //TODO(y): make this a config flag
 			log.Fatal("Server registration timed out.")
