@@ -6,12 +6,13 @@ import (
 	"math/rand"
 	"unicode"
 
+	"github.com/wangkuiyi/phoenix/algo/hist"
 	"github.com/wangkuiyi/sego"
 )
 
 type Document struct {
 	VShards   [][]Word
-	TopicHist Histogram // TODO(y): To see if we need to improve the data structure.
+	TopicHist hist.Sparse // TODO(y): To see if we need to improve the data structure.
 }
 
 type Word struct {
@@ -19,12 +20,10 @@ type Word struct {
 	Topic int
 }
 
-type Histogram map[int]int // TODO(y): To see if we need more types of histograms.
-
 func NewDocument(text string, sgmt *sego.Segmenter, vocab *Vocab, vshdr *VSharder, rng *rand.Rand, topics int) *Document {
 	d := &Document{
 		VShards:   make([][]Word, vshdr.Num()),
-		TopicHist: make(Histogram)}
+		TopicHist: make(hist.Sparse)}
 
 	for _, seg := range sgmt.Segment([]byte(text)) {
 		if word := seg.Token().Text(); !allPunctOrSpace(word) {
