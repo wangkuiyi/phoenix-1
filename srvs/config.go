@@ -12,9 +12,9 @@ type Config struct {
 	Vocab     string
 	Segmenter string
 
-	Topics    int
-	VShards   int
-	MinGroups int
+	Topics  int
+	VShards int
+	Groups  int
 }
 
 func (cfg *Config) RegisterFlags() {
@@ -25,7 +25,7 @@ func (cfg *Config) RegisterFlags() {
 
 	flag.IntVar(&cfg.Topics, "topics", 2, "The number of topics we are going to learn")
 	flag.IntVar(&cfg.VShards, "vshards", 2, "The number of VShards of the model")
-	flag.IntVar(&cfg.MinGroups, "minGroups", 1, "The minimum number of worker groups")
+	flag.IntVar(&cfg.Groups, "groups", 1, "The minimum number of worker groups")
 }
 
 func (cfg *Config) IterDir(iter int) string {

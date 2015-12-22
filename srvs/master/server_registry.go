@@ -1,4 +1,4 @@
-package main
+package master
 
 import (
 	"errors"
@@ -27,7 +27,7 @@ type Registry struct {
 func NewRegistry(cfg *srvs.Config) *Registry {
 	return &Registry{
 		vshards:    cfg.VShards,
-		minGroups:  cfg.MinGroups,
+		minGroups:  cfg.Groups,
 		cfg:        cfg,
 		completion: make(chan bool)}
 }
