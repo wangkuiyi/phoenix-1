@@ -30,7 +30,7 @@ func main() {
 	switch {
 	case rank == 0:
 		master.Run(*masterAddr, *timeout, &cfg)
-	case 1 <= rank && rank < cfg.VShards:
+	case 1 <= rank && rank <= cfg.VShards:
 		aggregator.Run(*masterAddr, *timeout)
 	default:
 		worker.Run(*masterAddr, *timeout)
