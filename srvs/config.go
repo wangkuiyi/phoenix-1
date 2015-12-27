@@ -12,6 +12,7 @@ type Config struct {
 	Vocab     string
 	Segmenter string
 
+	Iters   int
 	Topics  int
 	VShards int
 	Groups  int
@@ -23,6 +24,7 @@ func (cfg *Config) RegisterFlags() {
 	flag.StringVar(&cfg.Vocab, "vocab", "", "The token frequency file. Not listed tokens in corpus are ignored.")
 	flag.StringVar(&cfg.Segmenter, "segmenter", "", "The segmenter dictionary file.")
 
+	flag.IntVar(&cfg.Iters, "iters", 10, "The number of Gibbs sampling iterations")
 	flag.IntVar(&cfg.Topics, "topics", 2, "The number of topics we are going to learn")
 	flag.IntVar(&cfg.VShards, "vshards", 2, "The number of VShards of the model")
 	flag.IntVar(&cfg.Groups, "groups", 1, "The minimum number of worker groups")
