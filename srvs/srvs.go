@@ -21,15 +21,8 @@ type Aggregator struct {
 	cfg  *Config
 }
 
-// Master is an RPC service type.
+// Master is NOT an RPC service type. Instead, Registry is.
 type Master struct {
 	*Config
 	*Registry
-}
-
-func NewMaster(cfg *Config, sr *Registry) *Master {
-	return &Master{
-		Config:   cfg,
-		Registry: sr,
-	}
 }

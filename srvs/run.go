@@ -19,7 +19,7 @@ func RunMaster(addr string, timeout int, cfg *Config) {
 		select {
 		case <-sr.completion:
 			log.Println("Finished server registration. Starting workflow.")
-			wf := NewMaster(cfg, sr)
+			wf := &Master{cfg, sr}
 			defer shutdown(wf)
 			wf.Start()
 		case <-time.After(time.Duration(timeout) * time.Second):
