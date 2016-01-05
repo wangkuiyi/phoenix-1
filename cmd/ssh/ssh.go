@@ -5,9 +5,6 @@ import (
 	"log"
 
 	"github.com/wangkuiyi/phoenix/srvs"
-	"github.com/wangkuiyi/phoenix/srvs/aggregator"
-	"github.com/wangkuiyi/phoenix/srvs/master"
-	"github.com/wangkuiyi/phoenix/srvs/worker"
 )
 
 func main() {
@@ -20,11 +17,11 @@ func main() {
 
 	switch *role {
 	case "master":
-		master.Run(*addr, *timeout, &cfg)
+		srvs.RunMaster(*addr, *timeout, &cfg)
 	case "aggregator":
-		aggregator.Run(*addr, *timeout)
+		srvs.RunAggregator(*addr, *timeout)
 	case "worker":
-		worker.Run(*addr, *timeout)
+		srvs.RunWorker(*addr, *timeout)
 	default:
 		log.Fatal("Unknown role: ", *role)
 	}

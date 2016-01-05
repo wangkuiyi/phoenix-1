@@ -1,4 +1,4 @@
-package master
+package srvs
 
 import (
 	"fmt"
@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"github.com/wangkuiyi/parallel"
-	"github.com/wangkuiyi/phoenix/srvs"
 )
 
 func TestRegistry(t *testing.T) {
-	cfg := &srvs.Config{
+	cfg := &Config{
 		VShards: 1,
 		Groups:  2}
 	sr := NewRegistry(cfg)
@@ -49,7 +48,7 @@ func runClients(role string, workers int, master string, t *testing.T) {
 			if client, e := rpc.DialHTTP("tcp", master); e != nil {
 				t.Errorf("%v (%v) cannot dial master (%v): %v", role, l.Addr(), master, e)
 			} else {
-				var cfg srvs.Config
+				var cfg Config
 				e = client.Call(fmt.Sprintf("Registry.Add%v", role), l.Addr().String(), &cfg)
 				if e != nil {
 					t.Errorf("%v (%v) failed with RPC: %v", role, l.Addr(), e)

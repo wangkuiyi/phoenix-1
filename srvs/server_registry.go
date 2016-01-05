@@ -1,12 +1,10 @@
-package master
+package srvs
 
 import (
 	"errors"
 	"fmt"
 	"log"
 	"sync"
-
-	"github.com/wangkuiyi/phoenix/srvs"
 )
 
 // Registry is a RPC type.  It allows and expects vshards aggregators
@@ -14,9 +12,9 @@ import (
 type Registry struct {
 	vshards     int
 	minGroups   int
-	cfg         *srvs.Config
-	workers     []*srvs.RPC
-	aggregators []*srvs.RPC
+	cfg         *Config
+	workers     []*RPC
+	aggregators []*RPC
 	mutex       sync.Mutex
 	completion  chan bool
 }
@@ -24,7 +22,7 @@ type Registry struct {
 // Creates a Registry RPC service, which will trigger channel
 // completion after vshards aggregators and at least minGroups*vshards
 // workers registered.
-func NewRegistry(cfg *srvs.Config) *Registry {
+func NewRegistry(cfg *Config) *Registry {
 	return &Registry{
 		vshards:    cfg.VShards,
 		minGroups:  cfg.Groups,
@@ -39,11 +37,11 @@ func (sr *Registry) completed() bool {
 // NOTE: AddWorker doesn't put a cap on the number of workers. So
 // there might be workers register themselves after the workflow
 // starts.
-func (sr *Registry) AddWorker(addr string, cfg *srvs.Config) error {
+func (sr *Registry) AddWorker(addr string, cfg *Config) error {
 	sr.mutex.Lock()
 	defer sr.mutex.Unlock()
 
-	if c, e := srvs.Dial(addr); e == nil {
+	if c, e := Dial(addr); e == nil {
 		log.Printf("Established connection to registered worker %s.", addr)
 		sr.workers = append(sr.workers, c)
 		*cfg = *sr.cfg
@@ -58,7 +56,7 @@ func (sr *Registry) AddWorker(addr string, cfg *srvs.Config) error {
 	}
 }
 
-func (sr *Registry) AddAggregator(addr string, cfg *srvs.Config) error {
+func (sr *Registry) AddAggregator(addr string, cfg *Config) error {
 	sr.mutex.Lock()
 	defer sr.mutex.Unlock()
 
@@ -66,7 +64,7 @@ func (sr *Registry) AddAggregator(addr string, cfg *srvs.Config) error {
 		return errors.New("No more aggregators required")
 	}
 
-	if c, e := srvs.Dial(addr); e == nil {
+	if c, e := Dial(addr); e == nil {
 		log.Printf("Established connection to registered aggregator %s.", addr)
 		sr.aggregators = append(sr.aggregators, c)
 		*cfg = *sr.cfg
