@@ -20,7 +20,7 @@ func Run(addr string, timeout int, cfg *srvs.Config) {
 		case <-sr.completion:
 			log.Println("Finished server registration. Starting workflow.")
 			wf := NewWorkflow(cfg, sr)
-			defer panicRecover(wf)
+			defer shutdown(wf)
 			wf.Start()
 		case <-time.After(time.Duration(timeout) * time.Second):
 			log.Fatal("Server registration timed out.")
@@ -32,6 +32,6 @@ func Run(addr string, timeout int, cfg *srvs.Config) {
 	}
 }
 
-func panicRecover(wf *Workflow) {
+func shutdown(wf *Workflow) {
 	// TODO(y): shutdown all workers and aggregators when master panics.
 }
