@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"strconv"
 )
 
 type Config struct {
@@ -34,11 +35,54 @@ func (cfg *Config) RegisterFlags() {
 // IterDir(0) is the output of initialization iteration. IterDir(1)
 // and etc are outputs of Gibbs sampling iterations.  IterDir(i) has
 // the form $cfg.BaseDir/iter-0000i.  Please refer to IsIterDir.
-func (cfg *Config) IterDir(iter int) string {
-	return path.Join(cfg.BaseDir, fmt.Sprintf("iter-%05d", iter))
+func (cfg *Config) IterPath(iter int) string {
+	return path.Join(cfg.BaseDir, IterDir(iter))
+}
+
+func IterDir(iter int) string {
+	return fmt.Sprintf("iter-%05d", iter)
 }
 
 func IsIterDir(dir string) bool {
 	m, e := regexp.MatchString("^iter-[0-9]+$", dir)
 	return e == nil && m
+}
+
+func IterFromDir(dir string) (int, error) {
+	if !IsIterDir(dir) {
+		return -2, fmt.Errorf("%s is not a valid IterDir", dir)
+	}
+	return strconv.Atoi(dir[5:])
+}
+
+func (cfg *Config) VShardPath(iter, vshard int) string {
+	return path.Join(cfg.BaseDir, IterDir(iter), VShardName(vshard, cfg.VShards))
+}
+
+func VShardName(vshard, vshards int) string {
+	return fmt.Sprintf("vshard-%05d-of-%05d", vshard, vshards)
+}
+
+func IsVShardName(name string) bool {
+	m, e := regexp.MatchString("^vshard-[0-9]+-of-[0-9]+$", name)
+	return e == nil && m
+}
+
+func VShardFromName(name string) (int, int, error) {
+	if !IsVShardName(name) {
+		return -1, -1, fmt.Errorf("%s is not a valid vshard filename", name)
+	}
+	ss := regexp.MustCompile("[0-9]+").FindAllString(name, -1)
+	if len(ss) != 2 {
+		return -1, -1, fmt.Errorf("Failed to parse vshard name %s", name)
+	}
+	i, ei := strconv.Atoi(ss[0])
+	if ei != nil {
+		return -1, -1, ei
+	}
+	n, en := strconv.Atoi(ss[1])
+	if en != nil {
+		return -1, -1, en
+	}
+	return i, n, nil
 }

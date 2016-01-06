@@ -38,7 +38,7 @@ func (m *Master) Initialize() {
 func (w *Worker) Initialize(shard_filename string, _ *int) error {
 	if w.sgmt == nil {
 		w.sgmt = new(sego.Segmenter)
-		w.sgmt.LoadDictionary(w.cfg.Segmenter)
+		w.sgmt.LoadDictionary(w.Segmenter)
 	}
 
 	rng := NewRand(shard_filename)
@@ -49,7 +49,7 @@ func (w *Worker) Initialize(shard_filename string, _ *int) error {
 	}
 	defer in.Close()
 
-	out, e := fs.Create(w.cfg.IterDir(0))
+	out, e := fs.Create(w.IterPath(0))
 	if e != nil {
 		return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
 	}
@@ -58,7 +58,7 @@ func (w *Worker) Initialize(shard_filename string, _ *int) error {
 	scanner := bufio.NewScanner(in)
 	encoder := gob.NewEncoder(out)
 	for scanner.Scan() {
-		d := algo.NewDocument(scanner.Text(), w.sgmt, w.vocab, w.vshdr, rng, w.cfg.Topics)
+		d := algo.NewDocument(scanner.Text(), w.sgmt, w.vocab, w.vshdr, rng, w.Topics)
 		if e := encoder.Encode(d); e != nil {
 			return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
 		}

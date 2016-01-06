@@ -35,7 +35,9 @@ func TestRegistration(t *testing.T) {
 	time.Sleep(time.Second)
 	go runServer(t, "aggregator", "-master=:16060", "-registration=5")
 	time.Sleep(time.Second)
-	go runServer(t, "master", "-master=:16060", "-base="+base, "-vshards=1", "-groups=2", "-registration=5")
+	go runServer(t, "master", "-master=:16060", "-base="+base, "-vshards=1", "-groups=2", "-registration=5",
+		"-vocab="+path.Join(GoSrc(), "github.com/wangkuiyi/phoenix/algo/testdata/internet-zh.num"),
+		"-corpus="+path.Join(GoSrc(), "github.com/wangkuiyi/phoenix/srvs/testdata/corpus"))
 
 	// NOTE: Here we assume that the master will create the base
 	// dir once all required servers register themselves.
@@ -46,7 +48,7 @@ func TestRegistration(t *testing.T) {
 }
 
 func runServer(t *testing.T, role string, args ...string) {
-	p := path.Join(os.Getenv("GOPATH"), "bin", "ssh")
+	p := path.Join(GoPath(), "bin", "ssh")
 	args = append(args, "-role="+role)
 	fmt.Printf("Starting %v %v\n", p, strings.Join(args, " "))
 	// NOTE: the sub-process created by Cmd.CombinedOutput will be
@@ -55,4 +57,12 @@ func runServer(t *testing.T, role string, args ...string) {
 	if e != nil {
 		t.Skipf("Failed runing %s: %v: %s", role, e, b)
 	}
+}
+
+func GoPath() string {
+	return strings.Split(os.Getenv("GOPATH"), ":")[0]
+}
+
+func GoSrc() string {
+	return path.Join(GoPath(), "src")
 }

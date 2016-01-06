@@ -40,15 +40,15 @@ func shutdown(wf *Master) {
 // Start and functions called by it cna just panic or log.Panic if
 // anything goes wrong.  And, when master restarts, Start uses
 // mostRecentCompletedIter to resume training.
-func (wf *Master) Start() {
-	start := mostRecentCompletedIter(wf.BaseDir)
-	wf.Bootstrap(start)
+func (m *Master) Start() {
+	start := mostRecentCompletedIter(m.BaseDir)
+	m.Bootstrap(start)
 
-	for i := start; i < wf.Iters; i = mostRecentCompletedIter(wf.BaseDir) {
+	for i := start; i < m.Iters; i = mostRecentCompletedIter(m.BaseDir) {
 		if i < 0 {
-			wf.Initialize()
+			m.Initialize()
 		} else {
-			wf.Gibbs(i + 1)
+			m.Gibbs(i + 1)
 		}
 	}
 }
@@ -67,7 +67,7 @@ func RunWorker(master string, timeout int) {
 		if e := healthz.OK(master, time.Duration(timeout)*time.Second); e != nil {
 			log.Fatalf("Waiting for master timed out: %v", e)
 		}
-		if e := Call(master, "Registry.AddWorker", w.addr, &w.cfg); e != nil {
+		if e := Call(master, "Registry.AddWorker", w.addr, &w.Config); e != nil {
 			log.Fatalf("Worker %v Cannot register to master: %v", w.addr, e)
 		}
 	}()
@@ -89,7 +89,7 @@ func RunAggregator(master string, timeout int) {
 		if e := healthz.OK(master, time.Duration(timeout)*time.Second); e != nil {
 			log.Fatalf("Waiting for master timed out: %v", e)
 		}
-		if e := Call(master, "Registry.AddAggregator", w.addr, &w.cfg); e != nil {
+		if e := Call(master, "Registry.AddAggregator", w.addr, &w.Config); e != nil {
 			log.Fatalf("Worker %v Cannot register to master: %v", w.addr, e)
 		}
 	}()

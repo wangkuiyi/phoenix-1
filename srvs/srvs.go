@@ -8,17 +8,22 @@ import (
 
 // Worker is an RPC service type.
 type Worker struct {
-	addr  string // Worker address. Also worker ID.
-	sgmt  *sego.Segmenter
+	addr string // Worker address. Also worker ID.
+	*Config
+
 	vocab *algo.Vocab
 	vshdr *algo.VSharder
-	cfg   *Config
+	sgmt  *sego.Segmenter
 }
 
 // Aggregator is an RPC service type.
 type Aggregator struct {
 	addr string
-	cfg  *Config
+	*Config
+
+	vocab *algo.Vocab
+	vshdr *algo.VSharder
+	model *algo.Model
 }
 
 // Master is NOT an RPC service type. Instead, Registry is.
