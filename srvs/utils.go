@@ -40,5 +40,3 @@ func Seed(text string) int64 {
 func NewRand(seed string) *rand.Rand {
 	return rand.New(rand.NewSource(Seed(seed)))
 }
-
-func CallAll(clients []*RPC, method string, 
