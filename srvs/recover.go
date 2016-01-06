@@ -3,7 +3,6 @@ package srvs
 import (
 	"log"
 	"os"
-	"regexp"
 	"sort"
 
 	"github.com/wangkuiyi/fs"
@@ -11,7 +10,13 @@ import (
 
 // Returns -1 indicating that no iterations is completed, 0 means
 // initiialization is completed, 1 means the first Gibbs sampling
-// iteration is completed, etc.
+// iteration is completed, etc.  For the form of IterDir, please refer
+// to Config.IterDir and IsIterDir.
+//
+// Note that mostRecentCompletedIter checks the completion of an
+// iteration by checking the existence of its IterDir.  So we should
+// create a temporary directory and rename it into the form of an
+// IterDir.
 func mostRecentCompletedIter(baseDir string) int {
 	if base, e := fs.Stat(baseDir); os.IsNotExist(e) {
 		if e := fs.Mkdir(baseDir); e != nil {
@@ -28,7 +33,7 @@ func mostRecentCompletedIter(baseDir string) int {
 	}
 	sort.Sort(byName(subdirs)) // sort by descending alphabetic order of names
 	for i, sd := range subdirs {
-		if m, e := regexp.MatchString("^foo[0-9]+$", sd.Name()); e != nil && m {
+		if IsIterDir(sd.Name()) {
 			return i
 		}
 	}

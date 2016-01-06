@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"path"
+	"regexp"
 )
 
 type Config struct {
@@ -30,6 +31,14 @@ func (cfg *Config) RegisterFlags() {
 	flag.IntVar(&cfg.Groups, "groups", 1, "The minimum number of worker groups")
 }
 
+// IterDir(0) is the output of initialization iteration. IterDir(1)
+// and etc are outputs of Gibbs sampling iterations.  IterDir(i) has
+// the form $cfg.BaseDir/iter-0000i.  Please refer to IsIterDir.
 func (cfg *Config) IterDir(iter int) string {
-	return path.Join(cfg.BaseDir, fmt.Sprintf("%05d", iter))
+	return path.Join(cfg.BaseDir, fmt.Sprintf("iter-%05d", iter))
+}
+
+func IsIterDir(dir string) bool {
+	m, e := regexp.MatchString("^iter-[0-9]+$", dir)
+	return e == nil && m
 }
