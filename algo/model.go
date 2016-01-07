@@ -8,7 +8,7 @@ import (
 
 type Model struct {
 	Vocab       *Vocab
-	VSharder    *VSharder
+	VShdr       *VSharder // If VShdr is nil, this is a global model.
 	VShard      int
 	DenseHists  []hist.Dense // either use Dense or Sparse
 	SparseHists []hist.Sparse
@@ -17,18 +17,24 @@ type Model struct {
 
 // Create either a dense model (for fast accessing) or a sparse model (for saving memory).
 func NewModel(dense bool, vocab *Vocab, vshdr *VSharder, vshard int, topics int) *Model {
-	if vshard < 0 || vshard >= vshdr.Num() {
+	if vshdr != nil && (vshard < 0 || vshard >= vshdr.Num()) {
 		log.Panicf("vshard (%d) out of range [0, %d)", vshard, vshdr.Num())
 	}
 	m := &Model{
-		Vocab:    vocab,
-		VSharder: vshdr,
-		VShard:   vshard,
-		Global:   make(hist.Dense64, topics)}
+		Vocab:  vocab,
+		VShdr:  vshdr,
+		VShard: vshard,
+		Global: make(hist.Dense64, topics)}
+
+	tokens := len(vocab.Ids)
+	if vshdr != nil {
+		tokens = vshdr.Size(vshard)
+	}
+
 	if dense {
-		m.DenseHists = make([]hist.Dense, vshdr.Size(vshard))
+		m.DenseHists = make([]hist.Dense, tokens)
 	} else {
-		m.SparseHists = make([]hist.Sparse, vshdr.Size(vshard))
+		m.SparseHists = make([]hist.Sparse, tokens)
 	}
 	return m
 }
@@ -37,10 +43,13 @@ func (m *Model) Topics() int {
 	return len(m.Global)
 }
 
-// If a token is in this VShard, return true and VShard-local token Id.
+// If a token is in this model, return true and VShard-local token Id.
 func (m *Model) In(token int) (bool, int) {
-	offset := token - m.VSharder.Begin(m.VShard)
-	return 0 <= offset && offset < m.VSharder.Size(m.VShard), offset
+	if m.VShdr == nil {
+		return true, token
+	}
+	offset := token - m.VShdr.Begin(m.VShard)
+	return 0 <= offset && offset < m.VShdr.Size(m.VShard), offset
 }
 
 func (m *Model) Inc(token, topic int, count int32) {

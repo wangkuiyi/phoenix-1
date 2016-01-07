@@ -20,7 +20,7 @@ type Word struct {
 	Topic int
 }
 
-func NewDocument(text string, sgmt *sego.Segmenter, vocab *Vocab, vshdr *VSharder, rng *rand.Rand, topics int) *Document {
+func NewDocument(text string, sgmt *sego.Segmenter, vocab *Vocab, vshdr *VSharder, rng *rand.Rand, topics int, model *Model) *Document {
 	d := &Document{
 		VShards:   make([][]Word, vshdr.Num()),
 		TopicHist: make(hist.Sparse)}
@@ -35,6 +35,7 @@ func NewDocument(text string, sgmt *sego.Segmenter, vocab *Vocab, vshdr *VSharde
 				topic := rng.Intn(topics)
 				d.VShards[shard] = append(d.VShards[shard], Word{Id: id, Topic: topic})
 				d.TopicHist[topic]++
+				model.Inc(id, topic, 1)
 			}
 		}
 	}
