@@ -25,7 +25,7 @@ func buildBinary() {
 	}
 }
 
-func TestRegistration(t *testing.T) {
+func TestRegression(t *testing.T) {
 	base := fmt.Sprintf("/tmp/%s-%d", "phoenix-regression-test", time.Now().UnixNano())
 
 	// NOTE: Here we assuem that :16060 was not used by other programs.
