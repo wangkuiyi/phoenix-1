@@ -36,7 +36,15 @@ func (m *Master) Initialize() {
 		}
 
 		ch := make(chan string)
-		go parallel.For(0, len(m.workers), 1, func(i int) {
+		go func() {
+			for _, fi := range fis {
+				if !fi.IsDir() {
+					ch <- fi.Name()
+				}
+			}
+			close(ch)
+		}()
+		parallel.For(0, len(m.workers), 1, func(i int) {
 			for fn := range ch {
 				var dumb int
 				if e := m.workers[i].Call("Worker.Initialize", &InitializeArg{fn, m.aggregators}, &dumb); e != nil {
@@ -44,12 +52,6 @@ func (m *Master) Initialize() {
 				}
 			}
 		})
-		for _, fi := range fis {
-			if !fi.IsDir() {
-				ch <- fi.Name()
-			}
-		}
-		close(ch)
 
 		parallel.For(0, m.cfg.VShards, 1, func(v int) {
 			var dumb int
@@ -85,7 +87,7 @@ func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {
 	}
 	defer in.Close()
 
-	out, e := fs.Create(path.Join(w.cfg.IterPath(0), arg.Shard))
+	out, e := fs.Create(path.Join(w.cfg.BaseDir, "current", arg.Shard))
 	if e != nil {
 		return fmt.Errorf("Worker(%v).Initialize(%v): %v", w.addr, arg.Shard, e)
 	}
@@ -119,6 +121,8 @@ func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {
 }
 
 func (a *Aggregator) Aggregate(diff []hist.Dense, _ *int) error {
+	log.Println("Aggregator.Aggregate ...")
+
 	if a.model.DenseHists == nil || a.model.SparseHists != nil {
 		return fmt.Errorf("Aggregator.Aggregate(diff): model must be dense")
 	}
@@ -131,18 +135,25 @@ func (a *Aggregator) Aggregate(diff []hist.Dense, _ *int) error {
 				a.model.DenseHists[i] = make(hist.Dense, a.model.Topics())
 			}
 			a.model.DenseHists[i][t] += diff[i][t]
+			a.model.Global[t] += int64(diff[i][t])
 		}
 	}
+
+	log.Println("Aggregator.Aggregate done")
 	return nil
 }
 
 func (a *Aggregator) Save(iterDir string, _ *int) error {
+	log.Printf("Aggregator.Save(%s) ...", iterDir)
+
 	vshard := path.Join(iterDir, VShardName(a.model.VShard, a.cfg.VShards))
 	out, e := fs.Create(vshard)
 	if e != nil {
 		return fmt.Errorf("Aggregator.Save() cannot create vshard file %v: %v", vshard, e)
 	}
 	defer out.Close()
+	e = gob.NewEncoder(out).Encode(a.model)
 
-	return gob.NewEncoder(out).Encode(a.model)
+	log.Printf("Aggregator.Save(%s) done", iterDir)
+	return e
 }
