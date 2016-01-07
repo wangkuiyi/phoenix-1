@@ -55,6 +55,8 @@ func (a *Aggregator) Bootstrap(arg *BootstrapArg, _ *int) error {
 			if e := gob.NewDecoder(model).Decode(a.model); e != nil {
 				return fmt.Errorf("Aggregator %v failed to decode model vshard %+v: %v", a.addr, arg, e)
 			}
+			a.vocab = a.model.Vocab
+			a.vshdr = a.model.VShdr
 		}
 	}
 

@@ -31,6 +31,15 @@ func Dial(addr string) (*RPC, error) {
 	}
 }
 
+func (c *RPC) Dial() error {
+	l, e := rpc.DialHTTP("tcp", c.Addr)
+	if e != nil {
+		return e
+	}
+	c.Client = l
+	return nil
+}
+
 func Call(addr, method string, args, reply interface{}) error {
 	c, e := rpc.DialHTTP("tcp", addr)
 	if e != nil {

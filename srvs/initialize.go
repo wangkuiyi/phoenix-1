@@ -10,6 +10,7 @@ import (
 	"github.com/wangkuiyi/fs"
 	"github.com/wangkuiyi/parallel"
 	"github.com/wangkuiyi/phoenix/algo"
+	"github.com/wangkuiyi/phoenix/algo/hist"
 )
 
 type InitializeArg struct {
@@ -24,9 +25,14 @@ func (m *Master) Initialize() {
 	if fis, e := fs.ReadDir(m.cfg.CorpusDir); e != nil {
 		log.Panicf("Failed listing corpus shards in %s: %v", m.cfg.CorpusDir, e)
 	} else {
-		// TODO(y): create a temp dir and rename after finishing.
-		if e := fs.Mkdir(m.cfg.IterPath(0)); e != nil {
-			log.Panicf("Failed creating output directory %s: %v", m.cfg.IterPath(0), e)
+		tmpDir := path.Join(m.cfg.BaseDir, "current")
+		if e := fs.Mkdir(tmpDir); e != nil {
+			log.Panicf("Failed to create initialization output directory %s: %v", tmpDir, e)
+		}
+
+		modelDir := path.Join(tmpDir, "model")
+		if e := fs.Mkdir(modelDir); e != nil {
+			log.Panicf("Failed to create initialziation model directory %s : %v", modelDir, e)
 		}
 
 		ch := make(chan string)
@@ -44,6 +50,15 @@ func (m *Master) Initialize() {
 			}
 		}
 		close(ch)
+
+		parallel.For(0, m.cfg.VShards, 1, func(v int) {
+			var dumb int
+			if e := m.aggregators[v].Call("Aggregator.Save", tmpDir, &dumb); e != nil {
+				log.Panicf("Aggregator %s failed to save model: %v", m.aggregators[v].Addr, e)
+			}
+		})
+
+		fs.Rename(tmpDir, m.cfg.IterPath(0))
 	}
 }
 
@@ -59,7 +74,7 @@ func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {
 
 	vshards := make([]*algo.Model, w.cfg.VShards)
 	for v := range vshards {
-		vshards[v] = algo.NewModel(true /*dense*/, w.vocab, w.vshdr, v, w.cfg.Topics)
+		vshards[v] = algo.NewModel(true /*dense*/, w.vocab, w.vshdr, v, w.cfg.Topics) // TODO(y): Check real sparsity and switch between dense/sparse.
 	}
 
 	rng := NewRand(arg.Shard) //TODO(y): May need more randomness here.
@@ -85,9 +100,49 @@ func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {
 		}
 	}
 	if scanner.Err() != nil {
-		return fmt.Errorf("%v.Initialize(%v): %v", w.addr, arg.Shard, scanner.Err())
+		return fmt.Errorf("%v.Initialize(%v) scanner error: %v", w.addr, arg.Shard, scanner.Err())
 	}
+
+	parallel.For(0, w.cfg.VShards, 1, func(v int) error {
+		if e := arg.Aggregators[v].Dial(); e != nil {
+			return e
+		}
+		var dumb int
+		if e := arg.Aggregators[v].Call("Aggregator.Aggregate", vshards[v].DenseHists, &dumb); e != nil {
+			return e
+		}
+		return nil
+	})
 
 	log.Printf("Worker(%s).Initialize(%s) done", w.addr, arg.Shard)
 	return nil
+}
+
+func (a *Aggregator) Aggregate(diff []hist.Dense, _ *int) error {
+	if a.model.DenseHists == nil || a.model.SparseHists != nil {
+		return fmt.Errorf("Aggregator.Aggregate(diff): model must be dense")
+	}
+	if len(a.model.DenseHists) != len(diff) {
+		return fmt.Errorf("Aggregator.Aggregate(diff): model vshard size (%d) != diff size(%d)", len(a.model.DenseHists), len(diff))
+	}
+	for i := range diff {
+		for t := 0; t < len(diff[i]); t++ {
+			if a.model.DenseHists[i] == nil {
+				a.model.DenseHists[i] = make(hist.Dense, a.model.Topics())
+			}
+			a.model.DenseHists[i][t] += diff[i][t]
+		}
+	}
+	return nil
+}
+
+func (a *Aggregator) Save(iterDir string, _ *int) error {
+	vshard := path.Join(iterDir, VShardName(a.model.VShard, a.cfg.VShards))
+	out, e := fs.Create(vshard)
+	if e != nil {
+		return fmt.Errorf("Aggregator.Save() cannot create vshard file %v: %v", vshard, e)
+	}
+	defer out.Close()
+
+	return gob.NewEncoder(out).Encode(a.model)
 }
