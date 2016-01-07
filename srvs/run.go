@@ -18,12 +18,12 @@ func RunMaster(addr string, timeout int, cfg *Config) {
 	go func() {
 		select {
 		case <-sr.completion:
-			log.Println("Finished server registration. Starting workflow.")
+			log.Printf("Finished server registration. Starting training: %v", *cfg)
 			wf := &Master{cfg, sr}
 			defer shutdown(wf)
 			wf.Start()
 		case <-time.After(time.Duration(timeout) * time.Second):
-			log.Fatal("Server registration timed out.")
+			log.Panic("Server registration timed out.")
 		}
 	}()
 
@@ -41,10 +41,11 @@ func shutdown(wf *Master) {
 // anything goes wrong.  And, when master restarts, Start uses
 // mostRecentCompletedIter to resume training.
 func (m *Master) Start() {
-	start := mostRecentCompletedIter(m.BaseDir)
+	start := mostRecentCompletedIter(m.cfg.BaseDir)
 	m.Bootstrap(start)
 
-	for i := start; i < m.Iters; i = mostRecentCompletedIter(m.BaseDir) {
+	for i := start; i < m.cfg.Iters; i = mostRecentCompletedIter(m.cfg.BaseDir) {
+		log.Println("Iteration ", i)
 		if i < 0 {
 			m.Initialize()
 		} else {
@@ -56,8 +57,9 @@ func (m *Master) Start() {
 func RunWorker(master string, timeout int) {
 	l, e := net.Listen("tcp", ":0") // OS allocates a free port.
 	if e != nil {
-		log.Fatalf("Worker cannot listen on: %v", e)
+		log.Panicf("Worker cannot listen on: %v", e)
 	}
+	log.Printf("Worker listening on %s", l.Addr())
 
 	w := &Worker{addr: l.Addr().String()}
 	rpc.Register(w)
@@ -65,10 +67,10 @@ func RunWorker(master string, timeout int) {
 
 	go func() {
 		if e := healthz.OK(master, time.Duration(timeout)*time.Second); e != nil {
-			log.Fatalf("Waiting for master timed out: %v", e)
+			log.Panicf("Waiting for master timed out: %v", e)
 		}
-		if e := Call(master, "Registry.AddWorker", w.addr, &w.Config); e != nil {
-			log.Fatalf("Worker %v Cannot register to master: %v", w.addr, e)
+		if e := Call(master, "Registry.AddWorker", w.addr, &w.cfg); e != nil {
+			log.Panicf("Worker %v Cannot register to master: %v", w.addr, e)
 		}
 	}()
 
@@ -78,8 +80,9 @@ func RunWorker(master string, timeout int) {
 func RunAggregator(master string, timeout int) {
 	l, e := net.Listen("tcp", ":0") // OS allocates a free port.
 	if e != nil {
-		log.Fatalf("Aggregator cannot listen on: %v", e)
+		log.Panicf("Aggregator cannot listen on: %v", e)
 	}
+	log.Printf("Aggregator listening on %s", l.Addr())
 
 	w := &Aggregator{addr: l.Addr().String()}
 	rpc.Register(w)
@@ -87,10 +90,10 @@ func RunAggregator(master string, timeout int) {
 
 	go func() {
 		if e := healthz.OK(master, time.Duration(timeout)*time.Second); e != nil {
-			log.Fatalf("Waiting for master timed out: %v", e)
+			log.Panicf("Waiting for master timed out: %v", e)
 		}
-		if e := Call(master, "Registry.AddAggregator", w.addr, &w.Config); e != nil {
-			log.Fatalf("Worker %v Cannot register to master: %v", w.addr, e)
+		if e := Call(master, "Registry.AddAggregator", w.addr, &w.cfg); e != nil {
+			log.Panicf("Worker %v Cannot register to master: %v", w.addr, e)
 		}
 	}()
 

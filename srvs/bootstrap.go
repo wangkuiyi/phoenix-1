@@ -14,14 +14,17 @@ import (
 // Bootstrap notifies the first Config.VShards aggregators to load
 // an existing model shard, or to initialize a new model shard.
 func (m *Master) Bootstrap(iter int) {
+	log.Println("Bootstrapping...")
+	defer log.Println("Bootstrap done")
+
 	if iter < 0 {
-		fs.Mkdir(m.BaseDir)
+		fs.Mkdir(m.cfg.BaseDir)
 	}
 
 	reordered := make([]*RPC, len(m.aggregators))
-	parallel.For(0, m.VShards, 1, func(i int) {
+	parallel.For(0, m.cfg.VShards, 1, func(i int) {
 		var realVShard int
-		if e := m.aggregators[i].Call("Aggregator.Bootstrap", m.VShardPath(iter, i), &realVShard); e != nil {
+		if e := m.aggregators[i].Call("Aggregator.Bootstrap", m.cfg.VShardPath(iter, i), &realVShard); e != nil {
 			log.Panicf("Aggregator(%s).Bootstrap(%v) failed: %v", m.aggregators[i].Addr, iter, e)
 		} else {
 			reordered[realVShard] = m.aggregators[i]
@@ -36,25 +39,19 @@ func (m *Master) Bootstrap(iter int) {
 // aggregators.  This re-order will be sent to workers during
 // initialization and Gibbs sampling.
 func (a *Aggregator) Bootstrap(vshardPath string, realVShard *int) error {
-	tokens, e := fs.Open(a.Vocab)
-	if e != nil {
-		return fmt.Errorf("Aggregator %v failed to open vocab file: %v", a.addr, e)
-	}
-	defer tokens.Close()
-
-	a.vocab, a.vshdr, e = algo.BuildVocabAndVSharder(tokens, a.VShards, true)
-	if e != nil {
-		return fmt.Errorf("Aggregator %v failed to build vocab and vsharder: %v", a.addr, e)
-	}
+	log.Printf("Aggregator(%s).Bootstrap(%s) ...", a.addr, vshardPath)
 
 	vshard, _, e := VShardFromName(path.Base(vshardPath))
 	if e != nil {
 		return fmt.Errorf("Aggregator %v failed to parse vshard from path %v: %v", a.addr, vshardPath, e)
 	}
-
 	iter, e := IterFromDir(path.Base(path.Dir(vshardPath)))
+
 	if e != nil || iter < 0 { // e != nil when the most recent iteration is negative
-		a.model = algo.NewModel(true, a.vocab, a.vshdr, vshard, a.Topics)
+		if e := GuaranteeVocabSharder(&a.vocab, &a.vshdr, a.cfg.Vocab, a.cfg.VShards); e != nil {
+			return fmt.Errorf("Aggregator %v failed to build vocab and vsharder from %v: %v", a.addr, a.cfg.Vocab, e)
+		}
+		a.model = algo.NewModel(true, a.vocab, a.vshdr, vshard, a.cfg.Topics)
 		*realVShard = vshard
 	} else {
 		if model, e := fs.Open(vshardPath); e != nil {
@@ -69,5 +66,6 @@ func (a *Aggregator) Bootstrap(vshardPath string, realVShard *int) error {
 		}
 	}
 
+	log.Printf("Aggregator(%s).Boostrap(%s) done", a.addr, vshardPath)
 	return nil
 }

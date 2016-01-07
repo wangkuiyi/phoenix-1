@@ -10,15 +10,22 @@ import (
 	"github.com/wangkuiyi/fs"
 	"github.com/wangkuiyi/parallel"
 	"github.com/wangkuiyi/phoenix/algo"
-	"github.com/wangkuiyi/sego"
 )
 
 func (m *Master) Initialize() {
-	if fis, e := fs.ReadDir(m.CorpusDir); e != nil {
-		log.Panicf("Failed listing corpus shards in %s: %v", m.CorpusDir, e)
+	log.Println("Initialization ...")
+	defer log.Println("Initialization done")
+
+	if fis, e := fs.ReadDir(m.cfg.CorpusDir); e != nil {
+		log.Panicf("Failed listing corpus shards in %s: %v", m.cfg.CorpusDir, e)
 	} else {
+		// TODO(y): create a temp dir and rename after finishing.
+		if e := fs.Mkdir(m.cfg.IterPath(0)); e != nil {
+			log.Panicf("Failed creating output directory %s: %v", m.cfg.IterPath(0), e)
+		}
+
 		ch := make(chan string)
-		parallel.For(0, len(m.workers), 1, func(i int) {
+		go parallel.For(0, len(m.workers), 1, func(i int) {
 			for fn := range ch {
 				var dumb int
 				if e := m.workers[i].Call("Worker.Initialize", fn, &dumb); e != nil {
@@ -28,40 +35,49 @@ func (m *Master) Initialize() {
 		})
 		for _, fi := range fis {
 			if !fi.IsDir() {
-				ch <- path.Join(m.CorpusDir, fi.Name())
+				ch <- fi.Name()
 			}
 		}
 		close(ch)
 	}
 }
 
-func (w *Worker) Initialize(shard_filename string, _ *int) error {
-	if w.sgmt == nil {
-		w.sgmt = new(sego.Segmenter)
-		w.sgmt.LoadDictionary(w.Segmenter)
+func (w *Worker) Initialize(shardFile string, _ *int) error {
+	log.Printf("Worker(%s).Initialize(%s) ...", w.addr, shardFile)
+
+	if e := GuaranteeSegmenter(&w.sgmt, w.cfg.Segmenter); e != nil {
+		return fmt.Errorf("Worker %s cannot load segmenter dictionary %s: %v", w.addr, w.cfg.Segmenter, e)
+	}
+	if e := GuaranteeVocabSharder(&w.vocab, &w.vshdr, w.cfg.Vocab, w.cfg.VShards); e != nil {
+		return fmt.Errorf("Aggregator %v failed to build vocab and vsharder from %v: %v", w.addr, w.cfg.Vocab, e)
 	}
 
-	rng := NewRand(shard_filename)
+	rng := NewRand(shardFile)
 
-	in, e := fs.Open(shard_filename)
+	in, e := fs.Open(path.Join(w.cfg.CorpusDir, shardFile))
 	if e != nil {
-		return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
+		return fmt.Errorf("Worker(%v).Initialize(%v): %v", w.addr, shardFile, e)
 	}
 	defer in.Close()
 
-	out, e := fs.Create(w.IterPath(0))
+	out, e := fs.Create(path.Join(w.cfg.IterPath(0), shardFile))
 	if e != nil {
-		return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
+		return fmt.Errorf("Worker(%v).Initialize(%v): %v", w.addr, shardFile, e)
 	}
 	defer out.Close()
 
 	scanner := bufio.NewScanner(in)
 	encoder := gob.NewEncoder(out)
 	for scanner.Scan() {
-		d := algo.NewDocument(scanner.Text(), w.sgmt, w.vocab, w.vshdr, rng, w.Topics)
+		d := algo.NewDocument(scanner.Text(), w.sgmt, w.vocab, w.vshdr, rng, w.cfg.Topics)
 		if e := encoder.Encode(d); e != nil {
-			return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, e)
+			return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shardFile, e)
 		}
 	}
-	return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shard_filename, scanner.Err())
+	if scanner.Err() != nil {
+		return fmt.Errorf("%v.Initialize(%v): %v", w.addr, shardFile, scanner.Err())
+	}
+
+	log.Printf("Worker(%s).Initialize(%s) done", w.addr, shardFile)
+	return nil
 }
