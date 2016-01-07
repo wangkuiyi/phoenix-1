@@ -24,6 +24,10 @@ func (m *Master) Bootstrap(iter int) {
 		fs.Mkdir(m.cfg.BaseDir)
 	}
 
+	if e := GuaranteeConfig(m.cfg); e != nil {
+		log.Panic(e)
+	}
+
 	parallel.For(0, m.cfg.VShards, 1, func(i int) {
 		var dumb int
 		if e := m.aggregators[i].Call("Aggregator.Bootstrap", &BootstrapArg{iter, i}, &dumb); e != nil {
