@@ -38,7 +38,7 @@ func (m *Master) Bootstrap(iter int) {
 	log.Println("Bootstrap done")
 }
 
-func (a *Aggregator) Bootstrap(arg BootstrapArg, _ *int) error {
+func (a *Aggregator) Bootstrap(arg *BootstrapArg, _ *int) error {
 	log.Printf("Aggregator(%s).Bootstrap(%+v) ...", a.addr, arg)
 
 	if arg.Iter < 0 { // Initialziation is not yet completed.

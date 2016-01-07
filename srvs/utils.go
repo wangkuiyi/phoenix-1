@@ -1,7 +1,9 @@
 package srvs
 
 import (
+	"bytes"
 	"crypto/md5"
+	"encoding/gob"
 	"math/rand"
 	"net/rpc"
 	"unsafe"
@@ -10,6 +12,15 @@ import (
 type RPC struct {
 	*rpc.Client
 	Addr string
+}
+
+func (c *RPC) GobDecode(buf []byte) error {
+	return gob.NewDecoder(bytes.NewBuffer(buf)).Decode(&(c.Addr))
+}
+func (c *RPC) GobEncode() ([]byte, error) {
+	var buf bytes.Buffer
+	e := gob.NewEncoder(&buf).Encode(c.Addr)
+	return buf.Bytes(), e
 }
 
 func Dial(addr string) (*RPC, error) {
