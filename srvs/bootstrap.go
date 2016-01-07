@@ -4,68 +4,56 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
-	"path"
 
 	"github.com/wangkuiyi/fs"
 	"github.com/wangkuiyi/parallel"
 	"github.com/wangkuiyi/phoenix/algo"
 )
 
-// Bootstrap notifies the first Config.VShards aggregators to load
-// an existing model shard, or to initialize a new model shard.
+type BootstrapArg struct {
+	Iter   int
+	VShard int
+}
+
+// Bootstrap notifies the first Config.VShards of all registered
+// aggregators to load an existing model shard or initialize a new one.
 func (m *Master) Bootstrap(iter int) {
 	log.Println("Bootstrapping...")
-	defer log.Println("Bootstrap done")
 
 	if iter < 0 {
 		fs.Mkdir(m.cfg.BaseDir)
 	}
 
-	reordered := make([]*RPC, len(m.aggregators))
 	parallel.For(0, m.cfg.VShards, 1, func(i int) {
-		var realVShard int
-		if e := m.aggregators[i].Call("Aggregator.Bootstrap", m.cfg.VShardPath(iter, i), &realVShard); e != nil {
+		var dumb int
+		if e := m.aggregators[i].Call("Aggregator.Bootstrap", &BootstrapArg{iter, i}, &dumb); e != nil {
 			log.Panicf("Aggregator(%s).Bootstrap(%v) failed: %v", m.aggregators[i].Addr, iter, e)
-		} else {
-			reordered[realVShard] = m.aggregators[i]
 		}
 	})
-	m.aggregators = reordered
+
+	log.Println("Bootstrap done")
 }
 
-// Bootstrap creates a new model shard if vshardPath is invalid, or
-// load an existing model shard.  Anyway, it returns the real vshard
-// sequence number, so that master can order RPC clients of all
-// aggregators.  This re-order will be sent to workers during
-// initialization and Gibbs sampling.
-func (a *Aggregator) Bootstrap(vshardPath string, realVShard *int) error {
-	log.Printf("Aggregator(%s).Bootstrap(%s) ...", a.addr, vshardPath)
+func (a *Aggregator) Bootstrap(arg BootstrapArg, _ *int) error {
+	log.Printf("Aggregator(%s).Bootstrap(%+v) ...", a.addr, arg)
 
-	vshard, _, e := VShardFromName(path.Base(vshardPath))
-	if e != nil {
-		return fmt.Errorf("Aggregator %v failed to parse vshard from path %v: %v", a.addr, vshardPath, e)
-	}
-	iter, e := IterFromDir(path.Base(path.Dir(vshardPath)))
-
-	if e != nil || iter < 0 { // e != nil when the most recent iteration is negative
+	if arg.Iter < 0 { // Initialziation is not yet completed.
 		if e := GuaranteeVocabSharder(&a.vocab, &a.vshdr, a.cfg.Vocab, a.cfg.VShards); e != nil {
 			return fmt.Errorf("Aggregator %v failed to build vocab and vsharder from %v: %v", a.addr, a.cfg.Vocab, e)
 		}
-		a.model = algo.NewModel(true, a.vocab, a.vshdr, vshard, a.cfg.Topics)
-		*realVShard = vshard
+		a.model = algo.NewModel(true, a.vocab, a.vshdr, arg.VShard, a.cfg.Topics)
 	} else {
-		if model, e := fs.Open(vshardPath); e != nil {
-			return fmt.Errorf("Aggregator %v failed to open vshard file %v: %v", a.addr, vshardPath, e)
+		if model, e := fs.Open(a.cfg.VShardPath(arg.Iter, arg.VShard)); e != nil {
+			return fmt.Errorf("Aggregator %v failed to open vshard %+v: %v", a.addr, arg, e)
 		} else {
 			defer model.Close()
 			a.model = &algo.Model{}
 			if e := gob.NewDecoder(model).Decode(a.model); e != nil {
-				return fmt.Errorf("Aggregator %v failed to decode model from %v: %v", a.addr, vshardPath, e)
+				return fmt.Errorf("Aggregator %v failed to decode model vshard %+v: %v", a.addr, arg, e)
 			}
-			*realVShard = a.model.VShard
 		}
 	}
 
-	log.Printf("Aggregator(%s).Boostrap(%s) done", a.addr, vshardPath)
+	log.Printf("Aggregator(%s).Boostrap(%+v) done", a.addr, arg)
 	return nil
 }

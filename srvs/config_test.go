@@ -44,13 +44,8 @@ func TestIterFromDir(t *testing.T) {
 
 func TestVShardName(t *testing.T) {
 	assert := assert.New(t)
-	assert.Equal("vshard-00000-of-00005", VShardName(0, 5))
+	assert.Equal("model/00000-of-00005", VShardName(0, 5))
 
 	assert.True(IsVShardName(VShardName(0, 5)))
-	assert.False(IsVShardName("shard-00000-of-00005"))
-
-	i, n, e := VShardFromName(VShardName(0, 5))
-	assert.Nil(e)
-	assert.Equal(0, i)
-	assert.Equal(5, n)
+	assert.False(IsVShardName("odel/00000-of-00005"))
 }

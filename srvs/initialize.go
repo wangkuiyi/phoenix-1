@@ -52,7 +52,7 @@ func (w *Worker) Initialize(shardFile string, _ *int) error {
 		return fmt.Errorf("Aggregator %v failed to build vocab and vsharder from %v: %v", w.addr, w.cfg.Vocab, e)
 	}
 
-	rng := NewRand(shardFile)
+	rng := NewRand(shardFile) //TODO(y): May need more randomness here.
 
 	in, e := fs.Open(path.Join(w.cfg.CorpusDir, shardFile))
 	if e != nil {

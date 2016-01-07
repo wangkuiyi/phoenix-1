@@ -32,8 +32,8 @@ func mostRecentCompletedIter(baseDir string) int {
 		log.Panicf("Cannot read base dir %s: %v", baseDir, e)
 	}
 	sort.Sort(byName(subdirs)) // sort by descending alphabetic order of names
-	for i, sd := range subdirs {
-		if IsIterDir(sd.Name()) {
+	for _, sd := range subdirs {
+		if i, e := IterFromDir(sd.Name()); e == nil {
 			return i
 		}
 	}

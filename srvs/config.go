@@ -60,29 +60,10 @@ func (cfg *Config) VShardPath(iter, vshard int) string {
 }
 
 func VShardName(vshard, vshards int) string {
-	return fmt.Sprintf("vshard-%05d-of-%05d", vshard, vshards)
+	return fmt.Sprintf("model/%05d-of-%05d", vshard, vshards)
 }
 
 func IsVShardName(name string) bool {
-	m, e := regexp.MatchString("^vshard-[0-9]+-of-[0-9]+$", name)
+	m, e := regexp.MatchString("^model/[0-9]+-of-[0-9]+$", name)
 	return e == nil && m
-}
-
-func VShardFromName(name string) (int, int, error) {
-	if !IsVShardName(name) {
-		return -1, -1, fmt.Errorf("%s is not a valid vshard filename", name)
-	}
-	ss := regexp.MustCompile("[0-9]+").FindAllString(name, -1)
-	if len(ss) != 2 {
-		return -1, -1, fmt.Errorf("Failed to parse vshard name %s", name)
-	}
-	i, ei := strconv.Atoi(ss[0])
-	if ei != nil {
-		return -1, -1, ei
-	}
-	n, en := strconv.Atoi(ss[1])
-	if en != nil {
-		return -1, -1, en
-	}
-	return i, n, nil
 }
