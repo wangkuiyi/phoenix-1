@@ -56,7 +56,11 @@ func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {
 	if e := GuaranteeVocabSharder(&w.vocab, &w.vshdr, w.cfg.Vocab, w.cfg.VShards); e != nil {
 		return fmt.Errorf("Aggregator %v failed to build vocab and vsharder from %v: %v", w.addr, w.cfg.Vocab, e)
 	}
-	model := algo.NewModel(true /*dense*/, w.vocab, nil /*global model*/, 0, w.cfg.Topics)
+
+	vshards := make([]*algo.Model, w.cfg.VShards)
+	for v := range vshards {
+		vshards[v] = algo.NewModel(true /*dense*/, w.vocab, w.vshdr, v, w.cfg.Topics)
+	}
 
 	rng := NewRand(arg.Shard) //TODO(y): May need more randomness here.
 
@@ -75,7 +79,7 @@ func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {
 	scanner := bufio.NewScanner(in)
 	encoder := gob.NewEncoder(out)
 	for scanner.Scan() {
-		d := algo.NewDocument(scanner.Text(), w.sgmt, w.vocab, w.vshdr, rng, w.cfg.Topics, model)
+		d := algo.NewDocument(scanner.Text(), w.sgmt, w.vocab, w.vshdr, rng, w.cfg.Topics, vshards)
 		if e := encoder.Encode(d); e != nil {
 			return fmt.Errorf("%v.Initialize(%v): %v", w.addr, arg.Shard, e)
 		}
