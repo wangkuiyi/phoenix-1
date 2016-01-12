@@ -37,7 +37,7 @@ func shutdown(wf *Master) {
 }
 
 // Start is called by RunMaster, which recovers panics. Therefore,
-// Start and functions called by it cna just panic or log.Panic if
+// Start and functions called by it can just panic or log.Panic if
 // anything goes wrong.  And, when master restarts, Start uses
 // mostRecentCompletedIter to resume training.
 func (m *Master) Start() {
