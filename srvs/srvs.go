@@ -1,6 +1,8 @@
 package srvs
 
 import (
+	"sync"
+
 	_ "github.com/wangkuiyi/healthz"
 	"github.com/wangkuiyi/phoenix/algo"
 	"github.com/wangkuiyi/sego"
@@ -26,8 +28,18 @@ type Aggregator struct {
 	model *algo.Model
 }
 
-// Master is NOT an RPC service type. Instead, Registry is.
+// Master is a RPC type.  It waits for workers and aggregators to
+// register themselves, and works with workers and aggregators training.
 type Master struct {
-	cfg *Config
-	*Registry
+	cfg               *Config
+	workers           []*RPC
+	aggregators       []*RPC
+	registrationMutex sync.Mutex
+	registrationDone  chan bool
+}
+
+func NewMaster(cfg *Config) *Master {
+	return &Master{
+		cfg:              cfg,
+		registrationDone: make(chan bool)}
 }

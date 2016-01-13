@@ -11,11 +11,11 @@ import (
 	"github.com/wangkuiyi/parallel"
 )
 
-func TestRegistry(t *testing.T) {
+func TestRegistering(t *testing.T) {
 	cfg := &Config{
 		VShards: 1,
 		Groups:  2}
-	sr := NewRegistry(cfg)
+	sr := NewMaster(cfg)
 
 	rpc.Register(sr)
 	rpc.HandleHTTP()
@@ -29,7 +29,7 @@ func TestRegistry(t *testing.T) {
 		go runClients("Aggregator", 1, l.Addr().String(), t) // 1 aggregator
 
 		select {
-		case <-sr.completion:
+		case <-sr.registrationDone:
 		case <-time.After(1 * time.Second):
 			t.Errorf("Timeout before registration")
 		}
@@ -49,7 +49,7 @@ func runClients(role string, workers int, master string, t *testing.T) {
 				t.Errorf("%v (%v) cannot dial master (%v): %v", role, l.Addr(), master, e)
 			} else {
 				var cfg Config
-				e = client.Call(fmt.Sprintf("Registry.Add%v", role), l.Addr().String(), &cfg)
+				e = client.Call(fmt.Sprintf("Master.Register%v", role), l.Addr().String(), &cfg)
 				if e != nil {
 					t.Errorf("%v (%v) failed with RPC: %v", role, l.Addr(), e)
 				}

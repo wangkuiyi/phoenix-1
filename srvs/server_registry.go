@@ -4,49 +4,27 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
+	"time"
+
+	"github.com/wangkuiyi/healthz"
 )
 
-// Registry is a RPC type.  It allows and expects vshards aggregators
-// and at least group*vshards workers to register themselves.
-type Registry struct {
-	vshards     int
-	minGroups   int
-	cfg         *Config
-	workers     []*RPC
-	aggregators []*RPC
-	mutex       sync.Mutex
-	completion  chan bool
+func (sr *Master) done() bool {
+	return len(sr.aggregators) == sr.cfg.VShards && len(sr.workers) >= sr.cfg.VShards*sr.cfg.Groups
 }
 
-// Creates a Registry RPC service, which will trigger channel
-// completion after vshards aggregators and at least minGroups*vshards
-// workers registered.
-func NewRegistry(cfg *Config) *Registry {
-	return &Registry{
-		vshards:    cfg.VShards,
-		minGroups:  cfg.Groups,
-		cfg:        cfg,
-		completion: make(chan bool)}
-}
-
-func (sr *Registry) completed() bool {
-	return len(sr.aggregators) == sr.vshards && len(sr.workers) >= sr.vshards*sr.minGroups
-}
-
-// NOTE: AddWorker doesn't put a cap on the number of workers. So
-// there might be workers register themselves after the workflow
-// starts.
-func (sr *Registry) AddWorker(addr string, cfg *Config) error {
-	sr.mutex.Lock()
-	defer sr.mutex.Unlock()
+// NOTE: RegisterWorker doesn't put a cap on the number of workers. So
+// there might be workers register themselves after training starts.
+func (sr *Master) RegisterWorker(addr string, cfg *Config) error {
+	sr.registrationMutex.Lock()
+	defer sr.registrationMutex.Unlock()
 
 	if c, e := Dial(addr); e == nil {
 		log.Printf("Established connection to registered worker %s.", addr)
 		sr.workers = append(sr.workers, c)
 		*cfg = *sr.cfg
-		if sr.completed() {
-			sr.completion <- true
+		if sr.done() {
+			sr.registrationDone <- true
 		}
 		return nil
 	} else {
@@ -56,11 +34,11 @@ func (sr *Registry) AddWorker(addr string, cfg *Config) error {
 	}
 }
 
-func (sr *Registry) AddAggregator(addr string, cfg *Config) error {
-	sr.mutex.Lock()
-	defer sr.mutex.Unlock()
+func (sr *Master) RegisterAggregator(addr string, cfg *Config) error {
+	sr.registrationMutex.Lock()
+	defer sr.registrationMutex.Unlock()
 
-	if len(sr.aggregators) >= sr.vshards {
+	if len(sr.aggregators) >= sr.cfg.VShards {
 		return errors.New("No more aggregators required")
 	}
 
@@ -68,13 +46,31 @@ func (sr *Registry) AddAggregator(addr string, cfg *Config) error {
 		log.Printf("Established connection to registered aggregator %s.", addr)
 		sr.aggregators = append(sr.aggregators, c)
 		*cfg = *sr.cfg
-		if sr.completed() {
-			sr.completion <- true
+		if sr.done() {
+			sr.registrationDone <- true
 		}
 		return nil
 	} else {
 		e = fmt.Errorf("Master cannot connect to registering aggregator %s: %s", addr, e)
 		log.Print(e)
 		return e
+	}
+}
+
+func RegisterWorker(master, worker string, cfg *Config, timeoutSeconds int) {
+	if e := healthz.OK(master, time.Duration(timeoutSeconds)*time.Second); e != nil {
+		log.Panicf("Waiting for master timed out: %v", e)
+	}
+	if e := Call(master, "Master.RegisterWorker", worker, cfg); e != nil {
+		log.Panicf("Worker %v Cannot register to master: %v", worker, e)
+	}
+}
+
+func RegisterAggregator(master, aggregator string, cfg *Config, timeoutSeconds int) {
+	if e := healthz.OK(master, time.Duration(timeoutSeconds)*time.Second); e != nil {
+		log.Panicf("Waiting for master timed out: %v", e)
+	}
+	if e := Call(master, "Master.RegisterAggregator", aggregator, cfg); e != nil {
+		log.Panicf("Worker %v Cannot register to master: %v", aggregator, e)
 	}
 }

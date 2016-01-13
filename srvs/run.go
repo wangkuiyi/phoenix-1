@@ -6,20 +6,18 @@ import (
 	"net/http"
 	"net/rpc"
 	"time"
-
-	"github.com/wangkuiyi/healthz"
 )
 
 func RunMaster(addr string, timeout int, cfg *Config) {
-	sr := NewRegistry(cfg)
+	sr := NewMaster(cfg)
 	rpc.Register(sr)
 	rpc.HandleHTTP()
 
 	go func() {
 		select {
-		case <-sr.completion:
+		case <-sr.registrationDone:
 			log.Printf("Finished server registration. Starting training: %v", *cfg)
-			wf := &Master{cfg, sr}
+			wf := (*Master)(sr)
 			defer shutdown(wf)
 			wf.Start()
 		case <-time.After(time.Duration(timeout) * time.Second):
@@ -54,7 +52,7 @@ func (m *Master) Start() {
 	}
 }
 
-func RunWorker(master string, timeout int) {
+func RunWorker(master string, timeoutSeconds int) {
 	l, e := net.Listen("tcp", ":0") // OS allocates a free port.
 	if e != nil {
 		log.Panicf("Worker cannot listen on: %v", e)
@@ -66,35 +64,25 @@ func RunWorker(master string, timeout int) {
 	rpc.HandleHTTP()
 
 	go func() {
-		if e := healthz.OK(master, time.Duration(timeout)*time.Second); e != nil {
-			log.Panicf("Waiting for master timed out: %v", e)
-		}
-		if e := Call(master, "Registry.AddWorker", w.addr, &w.cfg); e != nil {
-			log.Panicf("Worker %v Cannot register to master: %v", w.addr, e)
-		}
+		RegisterWorker(master, w.addr, w.cfg, timeoutSeconds)
 	}()
 
 	http.Serve(l, nil)
 }
 
-func RunAggregator(master string, timeout int) {
+func RunAggregator(master string, timeoutSeconds int) {
 	l, e := net.Listen("tcp", ":0") // OS allocates a free port.
 	if e != nil {
 		log.Panicf("Aggregator cannot listen on: %v", e)
 	}
 	log.Printf("Aggregator listening on %s", l.Addr())
 
-	w := &Aggregator{addr: l.Addr().String()}
-	rpc.Register(w)
+	a := &Aggregator{addr: l.Addr().String()}
+	rpc.Register(a)
 	rpc.HandleHTTP()
 
 	go func() {
-		if e := healthz.OK(master, time.Duration(timeout)*time.Second); e != nil {
-			log.Panicf("Waiting for master timed out: %v", e)
-		}
-		if e := Call(master, "Registry.AddAggregator", w.addr, &w.cfg); e != nil {
-			log.Panicf("Worker %v Cannot register to master: %v", w.addr, e)
-		}
+		RegisterAggregator(master, a.addr, a.cfg, timeoutSeconds)
 	}()
 
 	http.Serve(l, nil)
