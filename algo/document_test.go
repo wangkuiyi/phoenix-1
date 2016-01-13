@@ -78,8 +78,9 @@ func TestNewDocument(t *testing.T) {
 	vshdr := &VSharder{
 		Breakpoints: []int{3, 9, 12}}
 	rng := rand.New(rand.NewSource(1))
+	topics := 1
 	for i := range inputs {
-		if r := NewDocument(inputs[i], &sgmt, vocab, vshdr, rng, 1).String(vocab); r != outputs[i] {
+		if r := NewDocument(inputs[i], &sgmt, vocab, vshdr, rng, topics, nil).String(vocab); r != outputs[i] {
 			t.Errorf("Expecting %v, got %v", outputs[i], r)
 		}
 	}

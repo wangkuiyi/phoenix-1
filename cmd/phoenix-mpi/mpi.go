@@ -6,9 +6,6 @@ import (
 
 	mpi "github.com/JohannWeging/go-mpi"
 	"github.com/wangkuiyi/phoenix/srvs"
-	"github.com/wangkuiyi/phoenix/srvs/aggregator"
-	"github.com/wangkuiyi/phoenix/srvs/master"
-	"github.com/wangkuiyi/phoenix/srvs/worker"
 )
 
 func main() {
@@ -29,11 +26,11 @@ func main() {
 
 	switch {
 	case rank == 0:
-		master.Run(*masterAddr, *timeout, &cfg)
+		srvs.RunMaster(*masterAddr, *timeout, &cfg)
 	case 1 <= rank && rank <= cfg.VShards:
-		aggregator.Run(*masterAddr, *timeout)
+		srvs.RunAggregator(*masterAddr, *timeout)
 	default:
-		worker.Run(*masterAddr, *timeout)
+		srvs.RunWorker(*masterAddr, *timeout)
 	}
 
 	mpi.Finalize()
