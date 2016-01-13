@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 
+	"github.com/wangkuiyi/fs"
 	"github.com/wangkuiyi/phoenix/srvs"
 )
 
@@ -15,11 +17,12 @@ func main() {
 	role := flag.String("role", "", "Process role: master, aggregator or worker")
 	addr := flag.String("master", "", "Local master address, must be in form :xxxx")
 	timeout := flag.Int("registration", 5, "Registeration timeout in seconds")
-	logPrefix := flag.String("logPrefix", "", "Log output file")
+	logDir := flag.String("log_dir", "", "Log output file")
 	flag.Parse()
 
-	if len(*logPrefix) > 0 {
-		logFile := fmt.Sprintf("%s_%s_%d.log", *logPrefix, *role, os.Getpid())
+	if len(*logDir) > 0 {
+		fs.Mkdir(*logDir)
+		logFile := path.Join(*logDir, fmt.Sprintf("%s_%d.log", *role, os.Getpid()))
 		f, e := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if e != nil {
 			log.Panicf("Failed opening log file %s: %v", logFile, e)

@@ -18,7 +18,7 @@ func buildBinary() {
 }
 
 func runServer(t *testing.T, role string, args ...string) {
-	p := path.Join(GoPath(), "bin", "ssh")
+	p := path.Join(GoPath(), "bin", "phoenix-ssh")
 	args = append(args, "-role="+role)
 	fmt.Printf("Starting %v %v\n", p, strings.Join(args, " "))
 	// NOTE: the sub-process created by Cmd.CombinedOutput will be
