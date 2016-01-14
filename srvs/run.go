@@ -9,17 +9,16 @@ import (
 )
 
 func RunMaster(addr string, timeout int, cfg *Config) {
-	sr := NewMaster(cfg)
-	rpc.Register(sr)
+	m := NewMaster(cfg)
+	rpc.Register(m)
 	rpc.HandleHTTP()
 
 	go func() {
 		select {
-		case <-sr.registrationDone:
+		case <-m.registrationDone:
 			log.Printf("Finished server registration. Starting training: %v", *cfg)
-			wf := (*Master)(sr)
-			defer shutdown(wf)
-			wf.Start()
+			defer shutdown(m)
+			m.start()
 		case <-time.After(time.Duration(timeout) * time.Second):
 			log.Panic("Server registration timed out.")
 		}
@@ -38,16 +37,16 @@ func shutdown(wf *Master) {
 // Start and functions called by it can just panic or log.Panic if
 // anything goes wrong.  And, when master restarts, Start uses
 // mostRecentCompletedIter to resume training.
-func (m *Master) Start() {
+func (m *Master) start() {
 	start := mostRecentCompletedIter(m.cfg.BaseDir)
 	m.bootstrap(start)
 
 	for i := start; i < m.cfg.Iters; i = mostRecentCompletedIter(m.cfg.BaseDir) {
 		log.Println("Iteration ", i)
 		if i < 0 {
-			m.Initialize()
+			m.initialize()
 		} else {
-			m.Gibbs(i + 1)
+			m.gibbs(i + 1)
 		}
 	}
 }

@@ -95,3 +95,19 @@ func GuaranteeModel(model **algo.Model, vocab **algo.Vocab, vshdr **algo.VSharde
 	}
 	return nil
 }
+
+func GuaranteeCorpusShardList(corpusShards *[]string, corpusDir string) error {
+	if *corpusShards == nil {
+		fis, e := fs.ReadDir(corpusDir)
+		if e != nil {
+			return fmt.Errorf("Failed listing corpus shards in %s: %v", corpusDir, e)
+		}
+
+		for _, fi := range fis {
+			if !fi.IsDir() {
+				*corpusShards = append(*corpusShards, fi.Name())
+			}
+		}
+	}
+	return nil
+}

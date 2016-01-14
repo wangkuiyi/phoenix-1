@@ -19,14 +19,9 @@ type InitializeArg struct {
 	Aggregators []*RPC
 }
 
-func (m *Master) Initialize() {
+func (m *Master) initialize() {
 	log.Println("Initialization ...")
 	start := time.Now()
-
-	fis, e := fs.ReadDir(m.cfg.CorpusDir)
-	if e != nil {
-		log.Panicf("Failed listing corpus shards in %s: %v", m.cfg.CorpusDir, e)
-	}
 
 	tmpDir := path.Join(m.cfg.BaseDir, "current")
 	if e := fs.Mkdir(tmpDir); e != nil {
@@ -40,10 +35,8 @@ func (m *Master) Initialize() {
 
 	ch := make(chan string)
 	go func() {
-		for _, fi := range fis {
-			if !fi.IsDir() {
-				ch <- fi.Name()
-			}
+		for _, fn := range m.corpusShards {
+			ch <- fn
 		}
 		close(ch)
 	}()

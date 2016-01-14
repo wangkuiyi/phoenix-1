@@ -38,6 +38,8 @@ type Master struct {
 	aggregators       []*RPC
 	registrationMutex sync.Mutex
 	registrationDone  chan bool
+
+	corpusShards []string // Basenames of corpus shard files.
 }
 
 func NewMaster(cfg *Config) *Master {

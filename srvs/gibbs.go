@@ -1,7 +1,13 @@
 package srvs
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
-func (wf *Master) Gibbs(iter int) {
-	log.Printf("Gibbs %d", iter)
+func (wf *Master) gibbs(iter int) {
+	log.Printf("Gibbs %d ...", iter)
+	start := time.Now()
+
+	log.Printf("Gibbs %d done in %s", iter, time.Since(start))
 }
