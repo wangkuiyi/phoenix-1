@@ -50,8 +50,7 @@ func (m *Master) initialize() {
 	})
 
 	parallel.For(0, m.cfg.VShards, 1, func(v int) {
-		var dumb int
-		if e := m.aggregators[v].Call("Aggregator.Save", tmpDir, &dumb); e != nil {
+		if e := m.aggregators[v].Call("Aggregator.Save", tmpDir, nil); e != nil {
 			log.Panicf("Aggregator %s failed to save model: %v", m.aggregators[v].Addr, e)
 		}
 	})

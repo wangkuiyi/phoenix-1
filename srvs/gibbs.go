@@ -22,10 +22,12 @@ func (m *Master) gibbs(iter int) {
 		log.Panicf("Failed to create initialization output directory %s: %v", tmpDir, e)
 	}
 
-	modelDir := path.Join(tmpDir, "model")
-	if e := fs.Mkdir(modelDir); e != nil {
-		log.Panicf("Failed to create initialziation model directory %s : %v", modelDir, e)
-	}
+	parallel.For(0, len(m.workers), 1, func(w int) {
+		// TODO(y): Implement Worker.DownloadModel
+		if e := m.workers[w].Call("Worker.DownloadModel", m.aggregators[w%m.cfg.VShards].Addr, nil); e != nil {
+			log.Panicf("Worker[%d].DownloadModel(%d) failed: %v", w, w%m.cfg.VShards, e)
+		}
+	})
 
 	ch := make(chan []string)
 	go func() {
@@ -33,10 +35,29 @@ func (m *Master) gibbs(iter int) {
 			// Note: GuaranteeCorpusShardList makes sure that len(m.corpusShards) dividable by VShards.
 			ch <- m.corpusShards[s : s+m.cfg.VShards]
 		}
+		close(ch)
 	}()
 	parallel.For(0, len(m.workers), m.cfg.VShards, func(w int) {
 		for seg := range ch {
 			m.sampleSegment(seg, m.workers[w:w+m.cfg.VShards], m.aggregators, iter)
+		}
+	})
+
+	parallel.For(0, len(m.workers), 1, func(w int) {
+		// TODO(y): Implement Worker.ChangeModel.
+		if e := m.workers[w].Call("Worker.UploadDiff", m.aggregators[w%m.cfg.VShards].Addr, nil); e != nil {
+			log.Panicf("Worker[%d].UploadDiff(%d) failed: %v", w, w%m.cfg.VShards, e)
+		}
+	})
+
+	// TODO(y): Not every gibbs iteration need to checkpoint models.
+	modelDir := path.Join(tmpDir, "model")
+	if e := fs.Mkdir(modelDir); e != nil {
+		log.Panicf("Failed to create initialziation model directory %s : %v", modelDir, e)
+	}
+	parallel.For(0, m.cfg.VShards, 1, func(v int) {
+		if e := m.aggregators[v].Call("Aggregator.Save", tmpDir, nil); e != nil {
+			log.Panicf("Aggregator %s failed to save model: %v", m.aggregators[v].Addr, e)
 		}
 	})
 

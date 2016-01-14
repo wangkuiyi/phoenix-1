@@ -34,6 +34,7 @@ func mostRecentCompletedIter(baseDir string) int {
 	sort.Sort(byName(subdirs)) // sort by descending alphabetic order of names
 	for _, sd := range subdirs {
 		if i, e := IterFromDir(sd.Name()); e == nil {
+			// TODO(y): Not every gibbs iteration need to checkpoint models. Should return the most recent iteration with /model/ subdir.
 			return i
 		}
 	}
