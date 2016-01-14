@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"time"
 
 	"github.com/wangkuiyi/fs"
 	"github.com/wangkuiyi/parallel"
@@ -18,9 +19,9 @@ type InitializeArg struct {
 	Aggregators []*RPC
 }
 
-func (m *Master) Initialize() {
+func (m *Master) initialize() {
 	log.Println("Initialization ...")
-	defer log.Println("Initialization done")
+	start := time.Now()
 
 	if fis, e := fs.ReadDir(m.cfg.CorpusDir); e != nil {
 		log.Panicf("Failed listing corpus shards in %s: %v", m.cfg.CorpusDir, e)
@@ -62,6 +63,8 @@ func (m *Master) Initialize() {
 
 		fs.Rename(tmpDir, m.cfg.IterPath(0))
 	}
+
+	log.Printf("Initialization done in %s", time.Since(start))
 }
 
 func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {

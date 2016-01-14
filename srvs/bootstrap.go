@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/wangkuiyi/fs"
 	"github.com/wangkuiyi/parallel"
@@ -17,8 +18,9 @@ type BootstrapArg struct {
 
 // Bootstrap notifies the first Config.VShards of all registered
 // aggregators to load an existing model shard or initialize a new one.
-func (m *Master) Bootstrap(iter int) {
+func (m *Master) bootstrap(iter int) {
 	log.Println("Bootstrapping...")
+	start := time.Now()
 
 	if iter < 0 {
 		fs.Mkdir(m.cfg.BaseDir)
@@ -35,7 +37,7 @@ func (m *Master) Bootstrap(iter int) {
 		}
 	})
 
-	log.Println("Bootstrap done")
+	log.Printf("Bootstrap done in %s", time.Since(start))
 }
 
 func (a *Aggregator) Bootstrap(arg *BootstrapArg, _ *int) error {
