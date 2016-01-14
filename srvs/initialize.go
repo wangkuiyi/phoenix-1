@@ -57,7 +57,6 @@ func (m *Master) initialize() {
 	})
 
 	fs.Rename(tmpDir, m.cfg.IterPath(0))
-
 	log.Printf("Initialization done in %s", time.Since(start))
 }
 
@@ -106,8 +105,7 @@ func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {
 		if e := arg.Aggregators[v].Dial(); e != nil {
 			return e
 		}
-		var dumb int
-		if e := arg.Aggregators[v].Call("Aggregator.Aggregate", vshards[v].DenseHists, &dumb); e != nil {
+		if e := arg.Aggregators[v].Call("Aggregator.Aggregate", vshards[v].DenseHists, nil); e != nil {
 			return e
 		}
 		return nil

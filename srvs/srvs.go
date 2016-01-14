@@ -13,9 +13,10 @@ type Worker struct {
 	addr string // Worker network address.
 	cfg  Config // Filled by RegisterWorker.
 
-	vocab *algo.Vocab
-	vshdr *algo.VSharder
-	model *algo.Model
+	vocab   *algo.Vocab // TODO(y): Does Worker need to have vocab and vshdr? Or just use model.Vocab and model.VShdr?
+	vshdr   *algo.VSharder
+	model   *algo.Model
+	sampler *algo.Sampler
 
 	sgmt *sego.Segmenter
 }

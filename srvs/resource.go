@@ -96,7 +96,17 @@ func GuaranteeModel(model **algo.Model, vocab **algo.Vocab, vshdr **algo.VSharde
 	return nil
 }
 
-func GuaranteeCorpusShardList(corpusShards *[]string, corpusDir string) error {
+func GuaranteeSampler(sampler **algo.Sampler, model *algo.Model) error {
+	if *sampler == nil {
+		*sampler = &algo.Sampler{
+			Model: model,
+			Diff:  algo.NewModel(false /*sparse*/, model.Vocab, model.VShdr, model.VShard, model.Topics()),
+		}
+	}
+	return nil
+}
+
+func GuaranteeCorpusShardList(corpusShards *[]string, corpusDir string, vshards int) error {
 	if *corpusShards == nil {
 		fis, e := fs.ReadDir(corpusDir)
 		if e != nil {
@@ -106,6 +116,13 @@ func GuaranteeCorpusShardList(corpusShards *[]string, corpusDir string) error {
 		for _, fi := range fis {
 			if !fi.IsDir() {
 				*corpusShards = append(*corpusShards, fi.Name())
+			}
+		}
+
+		// Make sure that the length of corpus shard list is dividable by vshards.
+		if r := len(*corpusShards) % vshards; r != 0 {
+			for i := 0; i < vshards-r; i++ {
+				*corpusShards = append(*corpusShards, "")
 			}
 		}
 	}

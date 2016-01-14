@@ -29,7 +29,7 @@ func (m *Master) bootstrap(iter int) {
 
 	parallel.Do(
 		func() {
-			if e := GuaranteeCorpusShardList(&m.corpusShards, m.cfg.CorpusDir); e != nil {
+			if e := GuaranteeCorpusShardList(&m.corpusShards, m.cfg.CorpusDir, m.cfg.VShards); e != nil {
 				log.Panic(e)
 			}
 		},
@@ -58,9 +58,14 @@ func (m *Master) bootstrap(iter int) {
 // Bootstrap loads existing model if arg.Iter >= 0.
 func (w *Worker) Bootstrap(arg *BootstrapArg, _ *int) error {
 	log.Printf("Worker(%s).Bootstrap(%+v) ...", w.addr, arg)
-	e := GuaranteeModel(&w.model, &w.vocab, &w.vshdr, &w.cfg, arg)
+	if e := GuaranteeModel(&w.model, &w.vocab, &w.vshdr, &w.cfg, arg); e != nil {
+		return e
+	}
+	if e := GuaranteeSampler(&w.sampler, w.model); e != nil {
+		return e
+	}
 	log.Printf("Worker(%s).Boostrap(%+v) done", w.addr, arg)
-	return e
+	return nil
 }
 
 // Bootstrap loads existing model if arg.Iter >= 0, or create empty models
