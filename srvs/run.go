@@ -40,7 +40,7 @@ func shutdown(wf *Master) {
 // mostRecentCompletedIter to resume training.
 func (m *Master) Start() {
 	start := mostRecentCompletedIter(m.cfg.BaseDir)
-	m.Bootstrap(start)
+	m.bootstrap(start)
 
 	for i := start; i < m.cfg.Iters; i = mostRecentCompletedIter(m.cfg.BaseDir) {
 		log.Println("Iteration ", i)
@@ -64,7 +64,7 @@ func RunWorker(master string, timeoutSeconds int) {
 	rpc.HandleHTTP()
 
 	go func() {
-		RegisterWorker(master, w.addr, w.cfg, timeoutSeconds)
+		RegisterWorker(master, w.addr, &w.cfg, timeoutSeconds)
 	}()
 
 	http.Serve(l, nil)
@@ -82,7 +82,7 @@ func RunAggregator(master string, timeoutSeconds int) {
 	rpc.HandleHTTP()
 
 	go func() {
-		RegisterAggregator(master, a.addr, a.cfg, timeoutSeconds)
+		RegisterAggregator(master, a.addr, &a.cfg, timeoutSeconds)
 	}()
 
 	http.Serve(l, nil)

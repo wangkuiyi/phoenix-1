@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"time"
 
 	"github.com/wangkuiyi/fs"
 	"github.com/wangkuiyi/parallel"
@@ -20,48 +21,51 @@ type InitializeArg struct {
 
 func (m *Master) Initialize() {
 	log.Println("Initialization ...")
-	defer log.Println("Initialization done")
+	start := time.Now()
 
-	if fis, e := fs.ReadDir(m.cfg.CorpusDir); e != nil {
+	fis, e := fs.ReadDir(m.cfg.CorpusDir)
+	if e != nil {
 		log.Panicf("Failed listing corpus shards in %s: %v", m.cfg.CorpusDir, e)
-	} else {
-		tmpDir := path.Join(m.cfg.BaseDir, "current")
-		if e := fs.Mkdir(tmpDir); e != nil {
-			log.Panicf("Failed to create initialization output directory %s: %v", tmpDir, e)
-		}
-
-		modelDir := path.Join(tmpDir, "model")
-		if e := fs.Mkdir(modelDir); e != nil {
-			log.Panicf("Failed to create initialziation model directory %s : %v", modelDir, e)
-		}
-
-		ch := make(chan string)
-		go func() {
-			for _, fi := range fis {
-				if !fi.IsDir() {
-					ch <- fi.Name()
-				}
-			}
-			close(ch)
-		}()
-		parallel.For(0, len(m.workers), 1, func(i int) {
-			for fn := range ch {
-				var dumb int
-				if e := m.workers[i].Call("Worker.Initialize", &InitializeArg{fn, m.aggregators}, &dumb); e != nil {
-					log.Panicf("Worker %s failed initializing shard %s: %v", m.workers[i].Addr, fn, e)
-				}
-			}
-		})
-
-		parallel.For(0, m.cfg.VShards, 1, func(v int) {
-			var dumb int
-			if e := m.aggregators[v].Call("Aggregator.Save", tmpDir, &dumb); e != nil {
-				log.Panicf("Aggregator %s failed to save model: %v", m.aggregators[v].Addr, e)
-			}
-		})
-
-		fs.Rename(tmpDir, m.cfg.IterPath(0))
 	}
+
+	tmpDir := path.Join(m.cfg.BaseDir, "current")
+	if e := fs.Mkdir(tmpDir); e != nil {
+		log.Panicf("Failed to create initialization output directory %s: %v", tmpDir, e)
+	}
+
+	modelDir := path.Join(tmpDir, "model")
+	if e := fs.Mkdir(modelDir); e != nil {
+		log.Panicf("Failed to create initialziation model directory %s : %v", modelDir, e)
+	}
+
+	ch := make(chan string)
+	go func() {
+		for _, fi := range fis {
+			if !fi.IsDir() {
+				ch <- fi.Name()
+			}
+		}
+		close(ch)
+	}()
+	parallel.For(0, len(m.workers), 1, func(i int) {
+		for fn := range ch {
+			var dumb int
+			if e := m.workers[i].Call("Worker.Initialize", &InitializeArg{fn, m.aggregators}, &dumb); e != nil {
+				log.Panicf("Worker %s failed initializing shard %s: %v", m.workers[i].Addr, fn, e)
+			}
+		}
+	})
+
+	parallel.For(0, m.cfg.VShards, 1, func(v int) {
+		var dumb int
+		if e := m.aggregators[v].Call("Aggregator.Save", tmpDir, &dumb); e != nil {
+			log.Panicf("Aggregator %s failed to save model: %v", m.aggregators[v].Addr, e)
+		}
+	})
+
+	fs.Rename(tmpDir, m.cfg.IterPath(0))
+
+	log.Printf("Initialization done in %s", time.Since(start))
 }
 
 func (w *Worker) Initialize(arg *InitializeArg, _ *int) error {

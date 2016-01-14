@@ -10,18 +10,20 @@ import (
 
 // Worker is an RPC service type.
 type Worker struct {
-	addr string // Worker address. Also worker ID.
-	cfg  *Config
+	addr string // Worker network address.
+	cfg  Config // Filled by RegisterWorker.
 
 	vocab *algo.Vocab
 	vshdr *algo.VSharder
-	sgmt  *sego.Segmenter
+	model *algo.Model
+
+	sgmt *sego.Segmenter
 }
 
 // Aggregator is an RPC service type.
 type Aggregator struct {
-	addr string
-	cfg  *Config
+	addr string // Aggregator network address.
+	cfg  Config // Filled by RegisterAggregator.
 
 	vocab *algo.Vocab
 	vshdr *algo.VSharder

@@ -69,7 +69,7 @@ func (v *VSharder) Begin(vshard int) int {
 func BuildVocabAndVSharder(tokenFreqList io.Reader, numVShards int, delUnbalanced bool) (*Vocab, *VSharder, error) {
 	h, e := buildBalancedVShards(tokenFreqList, numVShards)
 	if e != nil {
-		return nil, nil, e
+		return nil, nil, fmt.Errorf("BuildVocabAndVSharder failed: %v", e)
 	}
 
 	v := &Vocab{

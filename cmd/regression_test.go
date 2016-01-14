@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -16,10 +15,10 @@ func init() {
 }
 
 func TestRegression(t *testing.T) {
-	logDir := "/tmp/phoenix_regression_test"
-	os.RemoveAll(logDir)
+	base := "/tmp/phoenix_regression_test"
+	logDir := path.Join(base, "log")
 
-	base := fmt.Sprintf("/tmp/%s-%d", "phoenix-regression-test", time.Now().UnixNano())
+	os.RemoveAll(base)
 
 	// NOTE: Here we assuem that :16060 was not used by other programs.
 	go runServer(t, "worker", "-master=:16060", "-registration=5", "-log_dir="+logDir)
