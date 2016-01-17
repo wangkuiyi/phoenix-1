@@ -2,11 +2,8 @@ package srvs
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/gob"
-	"math/rand"
 	"net/rpc"
-	"unsafe"
 )
 
 type RPC struct {
@@ -48,15 +45,4 @@ func Call(addr, method string, args, reply interface{}) error {
 	defer c.Close()
 
 	return c.Call(method, args, reply)
-}
-
-func Seed(text string) int64 {
-	hasher := md5.New()
-	hasher.Write([]byte(text))
-	sum := hasher.Sum(nil)
-	return *(*int64)(unsafe.Pointer(&sum[0]))
-}
-
-func NewRand(seed string) *rand.Rand {
-	return rand.New(rand.NewSource(Seed(seed)))
 }
